@@ -355,15 +355,16 @@ function saveScriptUrl() {
 // ── Data helpers ──────────────────────────────────────────
 function normalize(r) {
   return {
-    id:      Number(r.id),
-    name:    r.name  || '',
-    cat:     String(r.cat || '3'),
-    tag:     r.tag   || 'work',
-    note:    r.note  || '',
-    cleared: String(r.cleared).toUpperCase() === 'TRUE',
-    added:   (r.added || '').slice(0, 10),
-    pri:     String(r.pri != null ? r.pri : '2'),
-    starred: String(r.starred).toUpperCase() === 'TRUE',
+    id:       Number(r.id),
+    name:     r.name  || '',
+    cat:      String(r.cat || '3'),
+    tag:      r.tag   || 'work',
+    note:     r.note  || '',
+    cleared:  String(r.cleared).toUpperCase() === 'TRUE',
+    added:    (r.added || '').slice(0, 10),
+    pri:      String(r.pri != null ? r.pri : '2'),
+    deadline: r.deadline || '',
+    starred:  String(r.starred).toUpperCase() === 'TRUE',
   };
 }
 
@@ -378,17 +379,25 @@ async function loadItems() {
     document.getElementById('setup-banner').style.display = 'block';
     return;
   }
+  setSyncStatus('Loading…');
   try {
     const res = await fetch(scriptUrl + '?action=get');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
+    if (data.error) throw new Error(data.error);
     items = (data.items || []).map(normalize);
     localStorage.setItem('itemsCache', JSON.stringify(items));
     setSyncStatus('Synced', 'sync-ok');
     render();
   } catch(e) {
     const cached = localStorage.getItem('itemsCache');
-    if (cached) { items = JSON.parse(cached); setSyncStatus('Sync failed — saved locally', 'sync-err'); render(); }
-    else { setSyncStatus('Could not connect', 'sync-err'); }
+    if (cached) {
+      items = JSON.parse(cached);
+      setSyncStatus('Sync failed (' + e.message + ') — showing cached data', 'sync-err');
+      render();
+    } else {
+      setSyncStatus('Could not connect: ' + e.message, 'sync-err');
+    }
   }
 }
 
@@ -409,13 +418,14 @@ async function addItem() {
   const id = Date.now();
   const item = {
     id, name,
-    cat:     document.getElementById('f-cat').value,
-    tag:     document.getElementById('f-tag').value,
-    note:    '',
-    cleared: false,
-    added:   new Date().toISOString().slice(0,10),
-    pri:     document.getElementById('f-pri').value,
-    starred: false,
+    cat:      document.getElementById('f-cat').value,
+    tag:      document.getElementById('f-tag').value,
+    note:     '',
+    cleared:  false,
+    added:    new Date().toISOString().slice(0,10),
+    pri:      document.getElementById('f-pri').value,
+    deadline: '',
+    starred:  false,
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
