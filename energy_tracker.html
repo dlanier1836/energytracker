@@ -6,7 +6,8 @@
 <title>Energy Tracker</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
-  :root {
+  /* Light theme (default and manual) */
+  :root, html.light {
     --bg: #ffffff;
     --bg2: #f7f7f5;
     --bg3: #f0efe9;
@@ -19,7 +20,7 @@
     --radius-lg: 12px;
   }
 
-  /* Manual dark — beats everything */
+  /* Manual dark */
   html.dark {
     --bg: #1c1c1a;
     --bg2: #252523;
@@ -29,17 +30,6 @@
     --text3: #6b6b67;
     --border: rgba(255,255,255,0.12);
     --border2: rgba(255,255,255,0.22);
-  }
-  /* Manual light — explicitly beats system dark preference */
-  html.light {
-    --bg: #ffffff !important;
-    --bg2: #f7f7f5 !important;
-    --bg3: #f0efe9 !important;
-    --text: #1a1a18 !important;
-    --text2: #6b6b67 !important;
-    --text3: #9b9b96 !important;
-    --border: rgba(0,0,0,0.12) !important;
-    --border2: rgba(0,0,0,0.22) !important;
   }
   /* System dark mode only applies when no manual preference is set */
   @media (prefers-color-scheme: dark) {
