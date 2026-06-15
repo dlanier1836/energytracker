@@ -19,7 +19,7 @@
     --radius-lg: 12px;
   }
 
-  /* Manual dark override — applied via JS, overrides system preference */
+  /* Manual dark — beats everything */
   html.dark {
     --bg: #1c1c1a;
     --bg2: #252523;
@@ -30,7 +30,18 @@
     --border: rgba(255,255,255,0.12);
     --border2: rgba(255,255,255,0.22);
   }
-  /* System dark mode only applies when no manual preference is stored */
+  /* Manual light — explicitly beats system dark preference */
+  html.light {
+    --bg: #ffffff !important;
+    --bg2: #f7f7f5 !important;
+    --bg3: #f0efe9 !important;
+    --text: #1a1a18 !important;
+    --text2: #6b6b67 !important;
+    --text3: #9b9b96 !important;
+    --border: rgba(0,0,0,0.12) !important;
+    --border2: rgba(0,0,0,0.22) !important;
+  }
+  /* System dark mode only applies when no manual preference is set */
   @media (prefers-color-scheme: dark) {
     html:not(.light):not(.dark) {
       --bg: #1c1c1a;
@@ -314,7 +325,8 @@ function normalizeItems() {
   items = items.map(i => ({
     ...i,
     cat: String(i.cat),
-    pri: i.pri !== undefined ? String(i.pri) : '2'
+    pri: i.pri !== undefined ? String(i.pri) : '2',
+    added: i.added ? String(i.added).slice(0, 10) : ''
   }));
 }
 
