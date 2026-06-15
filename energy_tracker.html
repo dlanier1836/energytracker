@@ -92,6 +92,8 @@
   .pomo-btn:hover { background: var(--bg3); }
   .pomo-btn.start { background: var(--text); color: var(--bg); }
   .pomo-btn.start:hover { opacity: .85; }
+  .pomo-progress-wrap { width: 100%; height: 4px; background: var(--bg3); border-radius: 2px; margin-top: 2px; }
+  .pomo-progress-bar  { height: 4px; background: #3A9E6C; border-radius: 2px; transition: width .9s linear; width: 100%; }
 
   /* Add form */
   .add-form { background: var(--bg); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 10px; }
@@ -120,11 +122,24 @@
   /* Items */
   .item { background: var(--bg); border-radius: var(--radius-lg); margin-bottom: 6px; border: 0.5px solid var(--border); overflow: hidden; display: flex; flex-direction: column; position: relative; }
   .item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: var(--radius-lg) 0 0 var(--radius-lg); }
+  .item.acc-risk { background: #FEF2F2; border-color: #FACACA; }
+  .item.acc-enrg { background: #F0FBF5; border-color: #C3EDD6; }
+  .item.acc-neut { background: var(--bg); }
+  .item.acc-drai { background: #FFFBF0; border-color: #FADED9; }
   .item.acc-risk::before  { background: #D94848; }
   .item.acc-enrg::before  { background: #3A9E6C; }
   .item.acc-neut::before  { background: #9b9b96; }
   .item.acc-drai::before  { background: #C47D24; }
   .item.cleared { opacity: .55; }
+  /* Dark mode overrides for colored backgrounds */
+  html.dark .item.acc-risk, html:not(.light):not(.dark) .item.acc-risk { background: #2a1a1a; border-color: #4a2020; }
+  html.dark .item.acc-enrg, html:not(.light):not(.dark) .item.acc-enrg { background: #1a2a22; border-color: #1e4a30; }
+  html.dark .item.acc-drai, html:not(.light):not(.dark) .item.acc-drai { background: #2a2210; border-color: #4a3810; }
+  @media (prefers-color-scheme: dark) {
+    html:not(.light):not(.dark) .item.acc-risk { background: #2a1a1a; border-color: #4a2020; }
+    html:not(.light):not(.dark) .item.acc-enrg { background: #1a2a22; border-color: #1e4a30; }
+    html:not(.light):not(.dark) .item.acc-drai { background: #2a2210; border-color: #4a3810; }
+  }
 
   /* Star glow on starred items */
   .item.starred-item { box-shadow: 0 0 0 1.5px #f59e0b44; }
@@ -244,6 +259,9 @@
       <button class="pomo-btn start" id="pomo-start" onclick="pomoToggle()">Start</button>
       <button class="pomo-btn" onclick="pomoReset()">Reset</button>
     </div>
+    <div class="pomo-progress-wrap" style="width:100%">
+      <div class="pomo-progress-bar" id="pomo-bar"></div>
+    </div>
   </div>
 
   <!-- Stats -->
@@ -329,11 +347,35 @@ function toggleTheme() {
   if (html.classList.contains('dark')) {
     html.classList.remove('dark'); html.classList.add('light');
     localStorage.setItem('theme', 'light');
+    applyThemeColors(false);
   } else {
     html.classList.remove('light'); html.classList.add('dark');
     localStorage.setItem('theme', 'dark');
+    applyThemeColors(true);
   }
   updateThemeIcon();
+}
+function applyThemeColors(dark) {
+  const root = document.documentElement;
+  if (dark) {
+    root.style.setProperty('--bg',      '#1c1c1a');
+    root.style.setProperty('--bg2',     '#252523');
+    root.style.setProperty('--bg3',     '#2e2e2b');
+    root.style.setProperty('--text',    '#f0efe9');
+    root.style.setProperty('--text2',   '#a8a8a3');
+    root.style.setProperty('--text3',   '#6b6b67');
+    root.style.setProperty('--border',  'rgba(255,255,255,0.12)');
+    root.style.setProperty('--border2', 'rgba(255,255,255,0.22)');
+  } else {
+    root.style.setProperty('--bg',      '#ffffff');
+    root.style.setProperty('--bg2',     '#f7f7f5');
+    root.style.setProperty('--bg3',     '#f0efe9');
+    root.style.setProperty('--text',    '#1a1a18');
+    root.style.setProperty('--text2',   '#6b6b67');
+    root.style.setProperty('--text3',   '#9b9b96');
+    root.style.setProperty('--border',  'rgba(0,0,0,0.12)');
+    root.style.setProperty('--border2', 'rgba(0,0,0,0.22)');
+  }
 }
 function updateThemeIcon() {
   const isDark = document.documentElement.classList.contains('dark') ||
@@ -699,8 +741,7 @@ function itemHTML(i) {
       <div class="item-body">
         <div class="item-name ${i.cleared ? 'cleared' : ''}">${i.name}</div>
         <div class="item-meta">
-          <span class="badge ${c.cls}">${c.short}</span>
-          <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}">${i.tag}</span>
+          <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}" style="text-transform:none;letter-spacing:0">${i.tag}</span>
           ${priBadge}
           ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
         </div>
@@ -723,6 +764,7 @@ function setDuration(min) {
   pomoSecs = min * 60;
   document.querySelectorAll('.pomo-preset').forEach(b => b.classList.toggle('active', b.textContent.includes(min)));
   updatePomoDisplay();
+  updatePomoBar();
 }
 function pomoToggle() {
   if (pomoRunning) {
@@ -738,7 +780,13 @@ function pomoToggle() {
     pomoInterval = setInterval(() => {
       pomoSecs--;
       updatePomoDisplay();
-      if (pomoSecs <= 0) { clearInterval(pomoInterval); pomoRunning = false; document.getElementById('pomo-start').textContent = 'Start'; document.getElementById('pomo-status').textContent = 'Done!'; }
+      updatePomoBar();
+      if (pomoSecs <= 0) {
+        clearInterval(pomoInterval);
+        pomoRunning = false;
+        document.getElementById('pomo-start').textContent = 'Start';
+        document.getElementById('pomo-status').textContent = 'Done!';
+      }
     }, 1000);
   }
 }
@@ -749,10 +797,20 @@ function pomoReset() {
   document.getElementById('pomo-start').textContent = 'Start';
   document.getElementById('pomo-status').textContent = 'Ready';
   updatePomoDisplay();
+  updatePomoBar();
 }
 function updatePomoDisplay() {
   const m = Math.floor(pomoSecs/60), s = pomoSecs%60;
   document.getElementById('pomo-display').textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+function updatePomoBar() {
+  const pct = (pomoSecs / (pomoDuration * 60)) * 100;
+  document.getElementById('pomo-bar').style.width = pct + '%';
+  // color shifts red as time runs out
+  const bar = document.getElementById('pomo-bar');
+  if (pct > 50)      bar.style.background = '#3A9E6C';
+  else if (pct > 20) bar.style.background = '#C47D24';
+  else               bar.style.background = '#D94848';
 }
 
 // ── Init ──────────────────────────────────────────────────
