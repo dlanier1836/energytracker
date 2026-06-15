@@ -34,10 +34,14 @@
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); font-size: 15px; min-height: 100vh; }
   .app { max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
   h1 { font-size: 20px; font-weight: 500; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 10px; }
+
+  /* Setup banner */
   .setup-banner { background: #E6F1FB; border: 0.5px solid #B5D4F4; border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.25rem; font-size: 13px; color: #0C447C; line-height: 1.6; }
   .setup-banner strong { font-weight: 500; }
   .setup-banner input { width: 100%; margin-top: 8px; padding: 7px 10px; border-radius: var(--radius); border: 0.5px solid #85B7EB; font-size: 13px; background: white; color: #042C53; }
   .setup-banner button { margin-top: 8px; padding: 6px 14px; font-size: 13px; border-radius: var(--radius); border: 0.5px solid #378ADD; background: #E6F1FB; color: #185FA5; cursor: pointer; }
+
+  /* Stats */
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.25rem; }
   .stat { border-radius: var(--radius); padding: .7rem .85rem; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; }
   .stat:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.10); }
@@ -49,6 +53,8 @@
   .s2 { background: #EAF3DE; } .s2 .stat-num { color: #3B6D11; } .s2 .stat-lbl { color: #27500A; }
   .s3 { background: #F1EFE8; } .s3 .stat-num { color: #5F5E5A; } .s3 .stat-lbl { color: #444441; }
   .s4 { background: #FAEEDA; } .s4 .stat-num { color: #854F0B; } .s4 .stat-lbl { color: #633806; }
+
+  /* Add form */
   .form-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
   .form-card input, .form-card select { width: 100%; padding: 8px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); font-size: 14px; margin-bottom: 8px; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -56,35 +62,94 @@
   .add-btn { width: 100%; padding: 9px; margin-top: 4px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
   .add-btn:hover { background: var(--bg3); }
   .add-btn:active { transform: scale(0.98); }
+
+  /* Filters */
   .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
   .fb { font-size: 12px; padding: 5px 11px; border-radius: 20px; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text2); cursor: pointer; }
   .fb.active { background: var(--bg3); color: var(--text); border-color: var(--border2); font-weight: 500; }
+
+  /* Section headers */
   .section-hdr { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .07em; color: var(--text2); margin: 1.25rem 0 .5rem; padding-bottom: 6px; border-bottom: 0.5px solid var(--border); display: flex; align-items: center; gap: 8px; }
   .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .d1{background:#E24B4A;} .d2{background:#639922;} .d3{background:#888780;} .d4{background:#BA7517;}
-  .item { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); border-left: 3px solid; border-top-left-radius: 0; border-bottom-left-radius: 0; padding: .8rem 1rem; margin-bottom: 7px; display: flex; align-items: flex-start; gap: 10px; }
+
+  /* Item card */
+  .item { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); border-left: 3px solid; border-top-left-radius: 0; border-bottom-left-radius: 0; margin-bottom: 7px; overflow: hidden; }
   .acc1{border-left-color:#E24B4A;} .acc2{border-left-color:#639922;} .acc3{border-left-color:#B4B2A9;} .acc4{border-left-color:#BA7517;}
   .item.cleared { opacity: .4; }
+
+  /* Item top row (always visible) */
+  .item-row { padding: .8rem 1rem; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+  .item-row:hover { background: var(--bg2); }
+  .item.expanded .item-row { background: var(--bg2); }
+
+  /* Checkmark */
   .chk { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border2); background: transparent; cursor: pointer; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #3B6D11; }
   .chk.on { background: #EAF3DE; border-color: #639922; }
+
   .item-body { flex: 1; min-width: 0; }
   .item-name { font-weight: 500; margin-bottom: 4px; word-break: break-word; }
   .item-name.cleared { text-decoration: line-through; }
-  .item-meta { display: flex; gap: 5px; flex-wrap: wrap; }
+  .item-meta { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+
+  /* Badges */
   .badge { font-size: 11px; padding: 2px 7px; border-radius: 20px; font-weight: 500; }
   .b1{background:#FCEBEB;color:#A32D2D;} .b2{background:#EAF3DE;color:#3B6D11;}
   .b3{background:#F1EFE8;color:#5F5E5A;} .b4{background:#FAEEDA;color:#854F0B;}
   .bwork{background:#E6F1FB;color:#185FA5;} .bpersonal{background:#EEEDFE;color:#534AB7;}
+
+  /* Priority badge on item */
+  .pri-badge { font-size: 10px; padding: 2px 6px; border-radius: 20px; font-weight: 600; display: inline-flex; align-items: center; gap: 2px; }
+  .pri-high  { background: #FFF0C2; color: #7A4F00; }
+  .pri-high2 { background: #FFD700; color: #5A3800; }
+  .pri-low   { background: #EBEBEB; color: #666; }
+
   .item-note { font-size: 12px; color: var(--text2); margin-top: 4px; font-style: italic; }
+
+  /* Priority quick-tap buttons on item row */
+  .pri-btns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; margin-top: 1px; }
+  .pri-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 13px; padding: 1px 3px; line-height: 1; border-radius: 4px; }
+  .pri-btn:hover { background: var(--bg3); color: var(--text); }
+  .pri-btn.pri-active { color: var(--text); }
+
+  /* Delete button */
   .del-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 2px 4px; flex-shrink: 0; }
   .del-btn:hover { color: #A32D2D; }
+
+  /* Inline edit panel */
+  .item-edit { display: none; padding: .75rem 1rem 1rem; border-top: 0.5px solid var(--border); background: var(--bg2); }
+  .item.expanded .item-edit { display: block; }
+  .edit-field { width: 100%; padding: 7px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; margin-bottom: 7px; }
+  .edit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 7px; }
+  .edit-row select { margin-bottom: 0; }
+  .edit-row select, .edit-row .pri-select { width: 100%; padding: 7px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; }
+  .edit-actions { display: flex; gap: 7px; margin-top: 2px; }
+  .edit-save { flex: 1; padding: 7px; border-radius: var(--radius); border: 0.5px solid #378ADD; background: #E6F1FB; color: #185FA5; font-size: 13px; cursor: pointer; font-weight: 500; }
+  .edit-save:hover { background: #d0e8f8; }
+  .edit-cancel { padding: 7px 14px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text2); font-size: 13px; cursor: pointer; }
+  .edit-cancel:hover { background: var(--bg3); }
+  .edit-label { font-size: 11px; color: var(--text3); margin-bottom: 3px; }
+
+  /* Priority selector inside edit panel */
+  .pri-selector { display: flex; gap: 6px; margin-bottom: 7px; }
+  .pri-opt { flex: 1; padding: 6px 4px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text2); font-size: 12px; cursor: pointer; text-align: center; transition: all 0.1s; }
+  .pri-opt:hover { background: var(--bg3); }
+  .pri-opt.selected { border-color: var(--border2); font-weight: 600; }
+  .pri-opt.sel-high2 { background: #FFD700; color: #5A3800; border-color: #CCA800; }
+  .pri-opt.sel-high  { background: #FFF0C2; color: #7A4F00; border-color: #E8C84A; }
+  .pri-opt.sel-normal{ background: var(--bg3); color: var(--text); }
+  .pri-opt.sel-low   { background: #EBEBEB; color: #555; border-color: #CCC; }
+
+  /* Misc */
   .empty { text-align: center; color: var(--text2); padding: 2rem 0; font-size: 13px; }
   .sync-status { font-size: 11px; color: var(--text3); text-align: right; margin-bottom: .5rem; min-height: 16px; }
   .sync-status.error { color: #A32D2D; }
   .sync-status.ok { color: #3B6D11; }
+
   @media (max-width: 500px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
     .form-row { grid-template-columns: 1fr; }
+    .edit-row { grid-template-columns: 1fr; }
   }
 </style>
 </head>
@@ -93,14 +158,13 @@
   <h1><i class="ti ti-chart-bar"></i> Energy tracker</h1>
 
   <div class="setup-banner" id="setup-banner">
-    <strong>One-time setup:</strong> Paste your Google Apps Script URL below to connect your Google Sheet. 
+    <strong>One-time setup:</strong> Paste your Google Apps Script URL below to connect your Google Sheet.
     See the setup guide included with this file.<br>
     <input type="text" id="script-url-input" placeholder="https://script.google.com/macros/s/YOUR_ID/exec" />
     <button onclick="saveScriptUrl()">Save &amp; connect</button>
   </div>
 
   <div class="sync-status" id="sync-status"></div>
-
   <div class="stats" id="stats"></div>
 
   <div class="form-card">
@@ -138,15 +202,24 @@ const CATS = {
   '4': { label: 'Taking energy', short: 'Draining', cls: 'b4', acc: 'acc4', dot: 'd4' }
 };
 
-const CAT_ORDER = ['1','2','3','4']; // Risk → Energizing → Neutral → Draining, always
+// Priority: 0=high-high (!!), 1=high (!), 2=normal, 3=low
+// Sort uses this number ascending so 0 floats to top
+const PRI = {
+  '0': { label: '!! Top', badge: '!!', cls: 'pri-high2', selCls: 'sel-high2' },
+  '1': { label: '! High', badge: '!',  cls: 'pri-high',  selCls: 'sel-high' },
+  '2': { label: 'Normal', badge: null, cls: '',           selCls: 'sel-normal' },
+  '3': { label: 'Low',    badge: '↓',  cls: 'pri-low',   selCls: 'sel-low' }
+};
+
+const CAT_ORDER = ['1','2','3','4'];
 
 let items = [];
-let filter = 'all';      // 'all' | 'work' | 'personal' | '1'|'2'|'3'|'4'
+let filter = 'all';
+let expandedId = null; // which item's edit panel is open
 let SCRIPT_URL = localStorage.getItem('et_script_url') || '';
 
 if (SCRIPT_URL) {
   document.getElementById('setup-banner').style.display = 'none';
-  document.getElementById('script-url-input').value = SCRIPT_URL;
   loadFromSheet();
 } else {
   try { items = JSON.parse(localStorage.getItem('et_items') || '[]'); } catch(e) { items = []; }
@@ -166,7 +239,7 @@ function saveScriptUrl() {
 function setStatus(msg, cls) {
   const el = document.getElementById('sync-status');
   el.textContent = msg;
-  el.className = 'sync-status ' + cls;
+  el.className = 'sync-status ' + (cls || '');
 }
 
 async function loadFromSheet() {
@@ -175,22 +248,25 @@ async function loadFromSheet() {
   try {
     const res = await fetch(SCRIPT_URL + '?action=get');
     const data = await res.json();
-    items = data.map(i => ({ ...i, cat: String(i.cat) }));
+    items = data.map(i => ({
+      ...i,
+      cat: String(i.cat),
+      pri: i.pri !== undefined ? String(i.pri) : '2'
+    }));
     localStorage.setItem('et_items', JSON.stringify(items));
     setStatus('Synced ' + new Date().toLocaleTimeString(), 'ok');
     render();
   } catch(e) {
     try { items = JSON.parse(localStorage.getItem('et_items') || '[]'); } catch(e2) { items = []; }
+    // Ensure pri field exists on cached items
+    items = items.map(i => ({ ...i, pri: i.pri !== undefined ? String(i.pri) : '2' }));
     setStatus('Offline — showing cached data', 'error');
     render();
   }
 }
 
 async function syncToSheet(action, payload) {
-  if (!SCRIPT_URL) {
-    localStorage.setItem('et_items', JSON.stringify(items));
-    return;
-  }
+  if (!SCRIPT_URL) { localStorage.setItem('et_items', JSON.stringify(items)); return; }
   try {
     await fetch(SCRIPT_URL, {
       method: 'POST',
@@ -214,7 +290,8 @@ function addItem() {
     tag: document.getElementById('f-tag').value,
     note: document.getElementById('f-note').value.trim(),
     cleared: false,
-    added: new Date().toISOString().slice(0,10)
+    added: new Date().toISOString().slice(0,10),
+    pri: '2'
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
@@ -223,23 +300,73 @@ function addItem() {
   syncToSheet('add', { item });
 }
 
-function toggle(id) {
+function toggle(id, e) {
+  e.stopPropagation();
   const it = items.find(i => i.id === id);
   if (!it) return;
   it.cleared = !it.cleared;
+  if (expandedId === id) expandedId = null;
   render();
   syncToSheet('update', { item: it });
 }
 
-function del(id) {
+function del(id, e) {
+  e.stopPropagation();
   items = items.filter(i => i.id !== id);
+  if (expandedId === id) expandedId = null;
   render();
   syncToSheet('delete', { id });
 }
 
-// Called by stat boxes — sets a category filter and clears pill active state
+// Cycle priority via quick-tap buttons: up arrow raises, down arrow lowers
+function changePri(id, direction, e) {
+  e.stopPropagation();
+  const it = items.find(i => i.id === id);
+  if (!it) return;
+  let p = parseInt(it.pri || '2');
+  if (direction === 'up')   p = Math.max(0, p - 1);
+  if (direction === 'down') p = Math.min(3, p + 1);
+  it.pri = String(p);
+  render();
+  syncToSheet('update', { item: it });
+}
+
+function toggleExpand(id, e) {
+  // Don't expand if they clicked a button inside the row
+  if (e.target.closest('.chk') || e.target.closest('.del-btn') || e.target.closest('.pri-btn')) return;
+  expandedId = expandedId === id ? null : id;
+  render();
+}
+
+function saveEdit(id) {
+  const it = items.find(i => i.id === id);
+  if (!it) return;
+  it.name = document.getElementById('edit-name-' + id).value.trim() || it.name;
+  it.cat  = document.getElementById('edit-cat-' + id).value;
+  it.tag  = document.getElementById('edit-tag-' + id).value;
+  it.note = document.getElementById('edit-note-' + id).value.trim();
+  // Read selected priority from selector buttons
+  const sel = document.querySelector(`#edit-pri-${id} .pri-opt.selected`);
+  if (sel) it.pri = sel.dataset.val;
+  expandedId = null;
+  render();
+  syncToSheet('update', { item: it });
+}
+
+function cancelEdit() {
+  expandedId = null;
+  render();
+}
+
+function selectPri(id, val) {
+  document.querySelectorAll(`#edit-pri-${id} .pri-opt`).forEach(el => {
+    el.className = 'pri-opt' + (el.dataset.val === val ? ' selected ' + PRI[el.dataset.val].selCls : '');
+  });
+}
+
 function setStatFilter(cat) {
   filter = cat;
+  expandedId = null;
   document.querySelectorAll('.fb').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.stat').forEach(s => s.classList.remove('active-stat'));
   document.getElementById('stat-' + cat).classList.add('active-stat');
@@ -248,33 +375,44 @@ function setStatFilter(cat) {
 
 function setFilter(f, el) {
   filter = f;
+  expandedId = null;
   document.querySelectorAll('.fb').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.stat').forEach(s => s.classList.remove('active-stat'));
   el.classList.add('active');
   render();
 }
 
-// Returns items to display based on current filter.
-// 'all'      → everything (active + cleared), grouped by category
-// 'work'     → active work items, grouped by category
-// 'personal' → active personal items, grouped by category
-// '1'–'4'    → that category only (active + cleared), flat list
+function sortItems(arr) {
+  return [...arr].sort((a, b) => {
+    // cleared always last
+    if (a.cleared !== b.cleared) return a.cleared ? 1 : -1;
+    // within same cleared state: by priority (lower number = higher priority)
+    const pa = parseInt(a.pri || '2');
+    const pb = parseInt(b.pri || '2');
+    if (pa !== pb) return pa - pb;
+    // then by date added descending (newest first within same priority)
+    return (b.added || '').localeCompare(a.added || '');
+  });
+}
+
 function visible() {
-  if (filter === 'all') return items;
-  if (filter === 'work') return items.filter(i => i.tag === 'work' && !i.cleared);
+  if (filter === 'all')      return items;
+  if (filter === 'work')     return items.filter(i => i.tag === 'work' && !i.cleared);
   if (filter === 'personal') return items.filter(i => i.tag === 'personal' && !i.cleared);
   if (CAT_ORDER.includes(filter)) return items.filter(i => i.cat === filter);
   return items;
 }
 
 function render() {
-  // Stats — always counts of active (non-cleared) items
+  // Stats
   const counts = {'1':0,'2':0,'3':0,'4':0};
-  items.filter(i => !i.cleared).forEach(i => counts[i.cat]++);
+  items.filter(i => !i.cleared).forEach(i => { if (counts[i.cat] !== undefined) counts[i.cat]++; });
   document.getElementById('stats').innerHTML = CAT_ORDER.map(k => {
     const c = CATS[k];
     const isActive = filter === k;
-    return `<div class="stat s${k}${isActive ? ' active-stat' : ''}" id="stat-${k}" onclick="setStatFilter('${k}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')setStatFilter('${k}')">
+    return `<div class="stat s${k}${isActive ? ' active-stat' : ''}" id="stat-${k}"
+      onclick="setStatFilter('${k}')" role="button" tabindex="0"
+      onkeydown="if(event.key==='Enter')setStatFilter('${k}')">
       <div class="stat-num">${counts[k]}</div>
       <div class="stat-lbl">${c.short}</div>
     </div>`;
@@ -284,22 +422,18 @@ function render() {
   const listEl = document.getElementById('list');
   if (!vis.length) { listEl.innerHTML = '<div class="empty">Nothing here</div>'; return; }
 
-  // Always group by category in Risk → Energizing → Neutral → Draining order
   let html = '';
   if (CAT_ORDER.includes(filter)) {
-    // Single category view — flat list, no section header needed (category is obvious)
-    const sorted = [...vis].sort((a, b) => (a.cleared ? 1 : 0) - (b.cleared ? 1 : 0));
-    html = sorted.map(i => itemHTML(i)).join('');
+    // Single category — flat sorted list
+    sortItems(vis).forEach(i => { html += itemHTML(i); });
   } else {
-    // All / Work / Personal — group by category, enforced order
+    // All / Work / Personal — grouped by category in fixed order
     CAT_ORDER.forEach(k => {
       const group = vis.filter(i => i.cat === k);
       if (!group.length) return;
       const c = CATS[k];
-      // Within each group: active first, cleared last
-      const sorted = [...group].sort((a, b) => (a.cleared ? 1 : 0) - (b.cleared ? 1 : 0));
       html += `<div class="section-hdr"><span class="dot ${c.dot}"></span>${c.label}</div>`;
-      html += sorted.map(i => itemHTML(i)).join('');
+      sortItems(group).forEach(i => { html += itemHTML(i); });
     });
   }
   listEl.innerHTML = html;
@@ -307,20 +441,79 @@ function render() {
 
 function itemHTML(i) {
   const c = CATS[i.cat];
-  return `<div class="item ${c.acc} ${i.cleared ? 'cleared' : ''}">
-    <div class="chk ${i.cleared ? 'on' : ''}" onclick="toggle(${i.id})" role="checkbox" aria-checked="${i.cleared}" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')toggle(${i.id})">
-      ${i.cleared ? '<i class="ti ti-check"></i>' : ''}
-    </div>
-    <div class="item-body">
-      <div class="item-name ${i.cleared ? 'cleared' : ''}">${i.name}</div>
-      <div class="item-meta">
-        <span class="badge ${c.cls}">${c.short}</span>
-        <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}">${i.tag}</span>
-        ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
+  const pri = i.pri || '2';
+  const priInfo = PRI[pri];
+  const isExpanded = expandedId === i.id;
+
+  // Priority quick-tap buttons
+  const upActive  = pri < '2' ? 'pri-active' : '';
+  const downActive = pri > '2' ? 'pri-active' : '';
+  const priBtns = `<div class="pri-btns">
+    <button class="pri-btn ${upActive}" onclick="changePri(${i.id},'up',event)" title="Raise priority">▲</button>
+    <button class="pri-btn ${downActive}" onclick="changePri(${i.id},'down',event)" title="Lower priority">▼</button>
+  </div>`;
+
+  // Priority badge (only shown when not normal)
+  const priBadge = priInfo.badge
+    ? `<span class="pri-badge ${priInfo.cls}">${priInfo.badge}</span>`
+    : '';
+
+  // Inline edit panel
+  const editPanel = `<div class="item-edit">
+    <div class="edit-label">Name</div>
+    <input class="edit-field" id="edit-name-${i.id}" value="${i.name.replace(/"/g,'&quot;')}" />
+    <div class="edit-row">
+      <div>
+        <div class="edit-label">Category</div>
+        <select class="edit-field" id="edit-cat-${i.id}" style="margin-bottom:0">
+          <option value="1" ${i.cat==='1'?'selected':''}>Risk / threat / distraction</option>
+          <option value="2" ${i.cat==='2'?'selected':''}>Giving energy — want to do</option>
+          <option value="3" ${i.cat==='3'?'selected':''}>Neutral / normal</option>
+          <option value="4" ${i.cat==='4'?'selected':''}>Taking energy — watch it</option>
+        </select>
       </div>
-      ${i.note ? `<div class="item-note">${i.note}</div>` : ''}
+      <div>
+        <div class="edit-label">Tag</div>
+        <select class="edit-field" id="edit-tag-${i.id}" style="margin-bottom:0">
+          <option value="work"     ${i.tag==='work'    ?'selected':''}>Work</option>
+          <option value="personal" ${i.tag==='personal'?'selected':''}>Personal</option>
+        </select>
+      </div>
     </div>
-    <button class="del-btn" onclick="del(${i.id})" aria-label="Remove"><i class="ti ti-trash"></i></button>
+    <div class="edit-label">Priority</div>
+    <div class="pri-selector" id="edit-pri-${i.id}">
+      ${['0','1','2','3'].map(v => {
+        const sel = v === pri ? 'selected ' + PRI[v].selCls : '';
+        return `<div class="pri-opt ${sel}" data-val="${v}" onclick="selectPri(${i.id},'${v}')">${PRI[v].label}</div>`;
+      }).join('')}
+    </div>
+    <div class="edit-label">Note</div>
+    <input class="edit-field" id="edit-note-${i.id}" value="${(i.note||'').replace(/"/g,'&quot;')}" placeholder="Optional note" />
+    <div class="edit-actions">
+      <button class="edit-save" onclick="saveEdit(${i.id})">Save</button>
+      <button class="edit-cancel" onclick="cancelEdit()">Cancel</button>
+    </div>
+  </div>`;
+
+  return `<div class="item ${c.acc} ${i.cleared ? 'cleared' : ''} ${isExpanded ? 'expanded' : ''}" id="item-${i.id}">
+    <div class="item-row" onclick="toggleExpand(${i.id}, event)">
+      <div class="chk ${i.cleared ? 'on' : ''}" onclick="toggle(${i.id}, event)" role="checkbox" aria-checked="${i.cleared}" tabindex="0">
+        ${i.cleared ? '<i class="ti ti-check"></i>' : ''}
+      </div>
+      <div class="item-body">
+        <div class="item-name ${i.cleared ? 'cleared' : ''}">${i.name}</div>
+        <div class="item-meta">
+          <span class="badge ${c.cls}">${c.short}</span>
+          <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}">${i.tag}</span>
+          ${priBadge}
+          ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
+        </div>
+        ${i.note ? `<div class="item-note">${i.note}</div>` : ''}
+      </div>
+      ${priBtns}
+      <button class="del-btn" onclick="del(${i.id}, event)" aria-label="Remove"><i class="ti ti-trash"></i></button>
+    </div>
+    ${editPanel}
   </div>`;
 }
 
