@@ -39,7 +39,10 @@
   .setup-banner input { width: 100%; margin-top: 8px; padding: 7px 10px; border-radius: var(--radius); border: 0.5px solid #85B7EB; font-size: 13px; background: white; color: #042C53; }
   .setup-banner button { margin-top: 8px; padding: 6px 14px; font-size: 13px; border-radius: var(--radius); border: 0.5px solid #378ADD; background: #E6F1FB; color: #185FA5; cursor: pointer; }
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.25rem; }
-  .stat { border-radius: var(--radius); padding: .7rem .85rem; }
+  .stat { border-radius: var(--radius); padding: .7rem .85rem; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; }
+  .stat:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.10); }
+  .stat:active { transform: scale(0.97); }
+  .stat.active-stat { outline: 2px solid var(--border2); outline-offset: 1px; }
   .stat-num { font-size: 22px; font-weight: 500; }
   .stat-lbl { font-size: 11px; margin-top: 2px; line-height: 1.3; }
   .s1 { background: #FCEBEB; } .s1 .stat-num { color: #A32D2D; } .s1 .stat-lbl { color: #791F1F; }
@@ -120,13 +123,8 @@
 
   <div class="filters">
     <button class="fb active" onclick="setFilter('all',this)">All</button>
-    <button class="fb" onclick="setFilter('active',this)">Active</button>
     <button class="fb" onclick="setFilter('work',this)">Work</button>
     <button class="fb" onclick="setFilter('personal',this)">Personal</button>
-    <button class="fb" onclick="setFilter('1',this)">Risks</button>
-    <button class="fb" onclick="setFilter('2',this)">Energizing</button>
-    <button class="fb" onclick="setFilter('4',this)">Draining</button>
-    <button class="fb" onclick="setFilter('cleared',this)">Cleared</button>
   </div>
 
   <div id="list"></div>
@@ -140,8 +138,10 @@ const CATS = {
   '4': { label: 'Taking energy', short: 'Draining', cls: 'b4', acc: 'acc4', dot: 'd4' }
 };
 
+const CAT_ORDER = ['1','2','3','4']; // Risk → Energizing → Neutral → Draining, always
+
 let items = [];
-let filter = 'all';
+let filter = 'all';      // 'all' | 'work' | 'personal' | '1'|'2'|'3'|'4'
 let SCRIPT_URL = localStorage.getItem('et_script_url') || '';
 
 if (SCRIPT_URL) {
@@ -237,49 +237,72 @@ function del(id) {
   syncToSheet('delete', { id });
 }
 
+// Called by stat boxes — sets a category filter and clears pill active state
+function setStatFilter(cat) {
+  filter = cat;
+  document.querySelectorAll('.fb').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.stat').forEach(s => s.classList.remove('active-stat'));
+  document.getElementById('stat-' + cat).classList.add('active-stat');
+  render();
+}
+
 function setFilter(f, el) {
   filter = f;
   document.querySelectorAll('.fb').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.stat').forEach(s => s.classList.remove('active-stat'));
   el.classList.add('active');
   render();
 }
 
+// Returns items to display based on current filter.
+// 'all'      → everything (active + cleared), grouped by category
+// 'work'     → active work items, grouped by category
+// 'personal' → active personal items, grouped by category
+// '1'–'4'    → that category only (active + cleared), flat list
 function visible() {
   if (filter === 'all') return items;
-  if (filter === 'active') return items.filter(i => !i.cleared);
-  if (filter === 'cleared') return items.filter(i => i.cleared);
   if (filter === 'work') return items.filter(i => i.tag === 'work' && !i.cleared);
   if (filter === 'personal') return items.filter(i => i.tag === 'personal' && !i.cleared);
-  if (['1','2','3','4'].includes(filter)) return items.filter(i => i.cat === filter && !i.cleared);
+  if (CAT_ORDER.includes(filter)) return items.filter(i => i.cat === filter);
   return items;
 }
 
 function render() {
+  // Stats — always counts of active (non-cleared) items
   const counts = {'1':0,'2':0,'3':0,'4':0};
   items.filter(i => !i.cleared).forEach(i => counts[i.cat]++);
-  document.getElementById('stats').innerHTML = ['1','2','3','4'].map(k => {
+  document.getElementById('stats').innerHTML = CAT_ORDER.map(k => {
     const c = CATS[k];
-    return `<div class="stat s${k}"><div class="stat-num">${counts[k]}</div><div class="stat-lbl">${c.short}</div></div>`;
+    const isActive = filter === k;
+    return `<div class="stat s${k}${isActive ? ' active-stat' : ''}" id="stat-${k}" onclick="setStatFilter('${k}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')setStatFilter('${k}')">
+      <div class="stat-num">${counts[k]}</div>
+      <div class="stat-lbl">${c.short}</div>
+    </div>`;
   }).join('');
 
   const vis = visible();
   const listEl = document.getElementById('list');
   if (!vis.length) { listEl.innerHTML = '<div class="empty">Nothing here</div>'; return; }
 
-  const grouped = ['1','2','3','4'].includes(filter) || ['work','personal','cleared'].includes(filter);
-  if (grouped) {
-    listEl.innerHTML = vis.map(i => itemHTML(i)).join('');
+  // Always group by category in Risk → Energizing → Neutral → Draining order
+  let html = '';
+  if (CAT_ORDER.includes(filter)) {
+    // Single category view — flat list, no section header needed (category is obvious)
+    const sorted = [...vis].sort((a, b) => (a.cleared ? 1 : 0) - (b.cleared ? 1 : 0));
+    html = sorted.map(i => itemHTML(i)).join('');
   } else {
-    let html = '';
-    ['1','2','3','4'].forEach(k => {
+    // All / Work / Personal — group by category, enforced order
+    CAT_ORDER.forEach(k => {
       const group = vis.filter(i => i.cat === k);
       if (!group.length) return;
       const c = CATS[k];
+      // Within each group: active first, cleared last
+      const sorted = [...group].sort((a, b) => (a.cleared ? 1 : 0) - (b.cleared ? 1 : 0));
       html += `<div class="section-hdr"><span class="dot ${c.dot}"></span>${c.label}</div>`;
-      html += group.map(i => itemHTML(i)).join('');
+      html += sorted.map(i => itemHTML(i)).join('');
     });
-    listEl.innerHTML = html;
   }
+  listEl.innerHTML = html;
 }
 
 function itemHTML(i) {
