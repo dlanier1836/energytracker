@@ -150,6 +150,108 @@
   .sync-status.error { color: #A32D2D; }
   .sync-status.ok { color: #3B6D11; }
 
+  /* ── Pomodoro timer ─────────────────────────────────────────────────────── */
+  .pomo-card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.1rem 1.25rem 1rem;
+    margin-bottom: 1.25rem;
+    transition: background 0.4s, border-color 0.4s;
+  }
+  .pomo-card.running {
+    background: #EAF3DE;
+    border-color: #A8D57A;
+  }
+  .pomo-card.done {
+    animation: pomoDoneFlash 1.2s ease-out forwards;
+  }
+  @keyframes pomoDoneFlash {
+    0%   { background: #639922; border-color: #4a7519; }
+    40%  { background: #EAF3DE; border-color: #A8D57A; }
+    100% { background: var(--bg); border-color: var(--border); }
+  }
+  .pomo-top { display: flex; align-items: center; gap: 12px; }
+  .pomo-display {
+    font-size: 36px;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    min-width: 90px;
+  }
+  .pomo-card.running .pomo-display { color: #3B6D11; }
+  .pomo-label {
+    font-size: 12px;
+    color: var(--text3);
+    margin-top: 2px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 500;
+    min-height: 16px;
+    transition: color 0.3s;
+  }
+  .pomo-card.running .pomo-label { color: #639922; }
+  .pomo-controls { display: flex; flex-direction: column; gap: 8px; margin-left: auto; align-items: flex-end; }
+  .pomo-presets { display: flex; gap: 6px; }
+  .pomo-preset {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 0.5px solid var(--border2);
+    background: var(--bg2);
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .pomo-preset:hover { background: var(--bg3); color: var(--text); }
+  .pomo-preset.selected { background: #EAF3DE; color: #3B6D11; border-color: #A8D57A; font-weight: 600; }
+  .pomo-actions { display: flex; gap: 6px; }
+  .pomo-start {
+    padding: 6px 18px;
+    border-radius: var(--radius);
+    border: 0.5px solid #639922;
+    background: #EAF3DE;
+    color: #3B6D11;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .pomo-start:hover { background: #D4EDBA; }
+  .pomo-card.running .pomo-start {
+    background: #FCEBEB;
+    border-color: #E24B4A;
+    color: #A32D2D;
+  }
+  .pomo-card.running .pomo-start:hover { background: #FAD7D7; }
+  .pomo-reset {
+    padding: 6px 12px;
+    border-radius: var(--radius);
+    border: 0.5px solid var(--border2);
+    background: var(--bg2);
+    color: var(--text2);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .pomo-reset:hover { background: var(--bg3); }
+  /* Progress bar */
+  .pomo-bar-wrap {
+    margin-top: 10px;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .pomo-bar {
+    height: 100%;
+    background: #639922;
+    border-radius: 2px;
+    width: 0%;
+    transition: width 1s linear;
+  }
+
+
   @media (max-width: 500px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
     .form-row { grid-template-columns: 1fr; }
@@ -167,6 +269,28 @@
       </button>
     </span>
   </h1>
+
+  <!-- ── Pomodoro timer ───────────────────────────────────────────── -->
+  <div class="pomo-card" id="pomo-card">
+    <div class="pomo-top">
+      <div>
+        <div class="pomo-display" id="pomo-display">25:00</div>
+        <div class="pomo-label"  id="pomo-label">Ready</div>
+      </div>
+      <div class="pomo-controls">
+        <div class="pomo-presets">
+          <button class="pomo-preset" data-min="15" onclick="pomoSetPreset(15,this)">15 min</button>
+          <button class="pomo-preset selected" data-min="25" onclick="pomoSetPreset(25,this)">25 min</button>
+          <button class="pomo-preset" data-min="45" onclick="pomoSetPreset(45,this)">45 min</button>
+        </div>
+        <div class="pomo-actions">
+          <button class="pomo-start" id="pomo-start" onclick="pomoToggle()">Start</button>
+          <button class="pomo-reset" onclick="pomoReset()">Reset</button>
+        </div>
+      </div>
+    </div>
+    <div class="pomo-bar-wrap"><div class="pomo-bar" id="pomo-bar"></div></div>
+  </div>
 
   <div class="setup-banner" id="setup-banner">
     <strong>One-time setup:</strong> Paste your Google Apps Script URL below to connect your Google Sheet.
@@ -634,6 +758,106 @@ function itemHTML(i) {
 }
 
 document.getElementById('f-name').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+
+// ── Pomodoro ──────────────────────────────────────────────────────────────────
+const FOCUS_LABELS = [
+  'Deep work', 'In the zone', 'Locked in', 'Head down',
+  'Making it happen', 'Eyes on the prize', 'Building momentum'
+];
+
+let pomoTotal   = 25 * 60;  // seconds
+let pomoLeft    = pomoTotal;
+let pomoRunning = false;
+let pomoTimer   = null;
+let pomoLabel   = '';
+
+function pomoSetPreset(min, el) {
+  if (pomoRunning) return;
+  document.querySelectorAll('.pomo-preset').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  pomoTotal = min * 60;
+  pomoLeft  = pomoTotal;
+  pomoUpdateDisplay();
+}
+
+function pomoToggle() {
+  if (pomoRunning) {
+    pomoRunning = false;
+    clearInterval(pomoTimer);
+    document.getElementById('pomo-card').classList.remove('running');
+    document.getElementById('pomo-start').textContent = 'Resume';
+    document.getElementById('pomo-label').textContent = 'Paused';
+  } else {
+    pomoRunning = true;
+    pomoLabel = FOCUS_LABELS[Math.floor(Math.random() * FOCUS_LABELS.length)];
+    document.getElementById('pomo-card').classList.remove('done');
+    document.getElementById('pomo-card').classList.add('running');
+    document.getElementById('pomo-start').textContent = 'Pause';
+    document.getElementById('pomo-label').textContent = pomoLabel;
+    pomoTimer = setInterval(pomoTick, 1000);
+  }
+}
+
+function pomoTick() {
+  if (pomoLeft <= 0) {
+    clearInterval(pomoTimer);
+    pomoRunning = false;
+    pomoDone();
+    return;
+  }
+  pomoLeft--;
+  pomoUpdateDisplay();
+}
+
+function pomoUpdateDisplay() {
+  const m = Math.floor(pomoLeft / 60).toString().padStart(2, '0');
+  const s = (pomoLeft % 60).toString().padStart(2, '0');
+  document.getElementById('pomo-display').textContent = m + ':' + s;
+  const pct = ((pomoTotal - pomoLeft) / pomoTotal) * 100;
+  document.getElementById('pomo-bar').style.width = pct + '%';
+}
+
+function pomoReset() {
+  clearInterval(pomoTimer);
+  pomoRunning = false;
+  pomoLeft    = pomoTotal;
+  const card  = document.getElementById('pomo-card');
+  card.classList.remove('running', 'done');
+  document.getElementById('pomo-start').textContent = 'Start';
+  document.getElementById('pomo-label').textContent = 'Ready';
+  document.getElementById('pomo-bar').style.width   = '0%';
+  pomoUpdateDisplay();
+}
+
+function pomoDone() {
+  const card = document.getElementById('pomo-card');
+  card.classList.remove('running');
+  card.classList.add('done');
+  document.getElementById('pomo-start').textContent = 'Start';
+  document.getElementById('pomo-label').textContent = 'Session complete ✓';
+  document.getElementById('pomo-bar').style.width = '100%';
+  pomoLeft = pomoTotal;
+  pomoUpdateDisplay();
+
+  // Sound chime — three ascending tones using Web Audio API
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [[523, 0], [659, 0.18], [784, 0.36]].forEach(([freq, delay]) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+      gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + delay + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.8);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.85);
+    });
+  } catch(e) { /* audio not available */ }
+}
+
 </script>
 </body>
 </html>
