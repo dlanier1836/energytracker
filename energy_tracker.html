@@ -6,8 +6,8 @@
 <title>Energy Tracker</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
-  /* Light theme (default and manual) */
-  :root, html.light {
+  /* Theme variables — set by JS on <html> directly, no cascade fights */
+  :root {
     --bg: #ffffff;
     --bg2: #f7f7f5;
     --bg3: #f0efe9;
@@ -18,31 +18,6 @@
     --border2: rgba(0,0,0,0.22);
     --radius: 8px;
     --radius-lg: 12px;
-  }
-
-  /* Manual dark */
-  html.dark {
-    --bg: #1c1c1a;
-    --bg2: #252523;
-    --bg3: #2e2e2b;
-    --text: #f0efe9;
-    --text2: #a8a8a3;
-    --text3: #6b6b67;
-    --border: rgba(255,255,255,0.12);
-    --border2: rgba(255,255,255,0.22);
-  }
-  /* System dark mode only applies when no manual preference is set */
-  @media (prefers-color-scheme: dark) {
-    html:not(.light):not(.dark) {
-      --bg: #1c1c1a;
-      --bg2: #252523;
-      --bg3: #2e2e2b;
-      --text: #f0efe9;
-      --text2: #a8a8a3;
-      --text3: #6b6b67;
-      --border: rgba(255,255,255,0.12);
-      --border2: rgba(255,255,255,0.22);
-    }
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -208,7 +183,15 @@
         <option value="personal">Personal</option>
       </select>
     </div>
-    <input type="text" id="f-note" placeholder="Note (optional)" />
+    <div class="form-row">
+      <select id="f-pri">
+        <option value="2">Normal priority</option>
+        <option value="0">!! Top priority</option>
+        <option value="1">! High priority</option>
+        <option value="3">↓ Low priority</option>
+      </select>
+      <input type="text" id="f-note" placeholder="Note (optional)" style="margin-bottom:0" />
+    </div>
     <button class="add-btn" onclick="addItem()"><i class="ti ti-plus"></i> Add</button>
   </div>
 
@@ -251,36 +234,36 @@ let expandedId = null;
 let activeFilters = new Set(['all']);
 
 // ── Theme ────────────────────────────────────────────────────────────────────
-const savedTheme = localStorage.getItem('et_theme'); // 'light' | 'dark' | null
-if (savedTheme) {
-  document.documentElement.classList.add(savedTheme);
+const LIGHT_VARS = {
+  '--bg':'#ffffff','--bg2':'#f7f7f5','--bg3':'#f0efe9',
+  '--text':'#1a1a18','--text2':'#6b6b67','--text3':'#9b9b96',
+  '--border':'rgba(0,0,0,0.12)','--border2':'rgba(0,0,0,0.22)'
+};
+const DARK_VARS = {
+  '--bg':'#1c1c1a','--bg2':'#252523','--bg3':'#2e2e2b',
+  '--text':'#f0efe9','--text2':'#a8a8a3','--text3':'#6b6b67',
+  '--border':'rgba(255,255,255,0.12)','--border2':'rgba(255,255,255,0.22)'
+};
+
+function applyTheme(dark) {
+  const vars = dark ? DARK_VARS : LIGHT_VARS;
+  const root = document.documentElement;
+  Object.entries(vars).forEach(([k, v]) => root.style.setProperty(k, v));
+  const icon = document.getElementById('theme-icon');
+  if (icon) icon.className = dark ? 'ti ti-moon' : 'ti ti-sun';
 }
-updateThemeIcon();
+
+// Determine initial theme: saved preference, or system
+const savedTheme = localStorage.getItem('et_theme'); // 'dark' | 'light' | null
+const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+const startDark  = savedTheme === 'dark' || (savedTheme === null && systemDark);
+applyTheme(startDark);
 
 function toggleTheme() {
-  const html = document.documentElement;
-  const isDark = html.classList.contains('dark') ||
-    (!html.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  if (isDark) {
-    html.classList.remove('dark');
-    html.classList.add('light');
-    localStorage.setItem('et_theme', 'light');
-  } else {
-    html.classList.remove('light');
-    html.classList.add('dark');
-    localStorage.setItem('et_theme', 'dark');
-  }
-  updateThemeIcon();
-}
-
-function updateThemeIcon() {
-  const html = document.documentElement;
-  const isDark = html.classList.contains('dark') ||
-    (!html.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-  const icon = document.getElementById('theme-icon');
-  if (icon) {
-    icon.className = isDark ? 'ti ti-moon' : 'ti ti-sun';
-  }
+  const currentlyDark = document.documentElement.style.getPropertyValue('--bg').trim() === '#1c1c1a';
+  const nextDark = !currentlyDark;
+  applyTheme(nextDark);
+  localStorage.setItem('et_theme', nextDark ? 'dark' : 'light');
 }
 
 // ── Script URL / data loading ─────────────────────────────────────────────────
@@ -402,11 +385,12 @@ function addItem() {
     note: document.getElementById('f-note').value.trim(),
     cleared: false,
     added: new Date().toISOString().slice(0,10),
-    pri: '2'
+    pri: document.getElementById('f-pri').value
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
   document.getElementById('f-note').value = '';
+  document.getElementById('f-pri').value = '2';
   render();
   syncToSheet('add', { item });
 }
