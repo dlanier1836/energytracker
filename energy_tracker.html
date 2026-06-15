@@ -18,8 +18,21 @@
     --radius: 8px;
     --radius-lg: 12px;
   }
+
+  /* Manual dark override — applied via JS, overrides system preference */
+  html.dark {
+    --bg: #1c1c1a;
+    --bg2: #252523;
+    --bg3: #2e2e2b;
+    --text: #f0efe9;
+    --text2: #a8a8a3;
+    --text3: #6b6b67;
+    --border: rgba(255,255,255,0.12);
+    --border2: rgba(255,255,255,0.22);
+  }
+  /* System dark mode only applies when no manual preference is stored */
   @media (prefers-color-scheme: dark) {
-    :root {
+    html:not(.light):not(.dark) {
       --bg: #1c1c1a;
       --bg2: #252523;
       --bg3: #2e2e2b;
@@ -30,10 +43,16 @@
       --border2: rgba(255,255,255,0.22);
     }
   }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); font-size: 15px; min-height: 100vh; }
   .app { max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+
+  /* Header */
   h1 { font-size: 20px; font-weight: 500; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 10px; }
+  .h1-right { margin-left: auto; }
+  .theme-btn { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 20px; padding: 2px 4px; border-radius: 6px; display: flex; align-items: center; }
+  .theme-btn:hover { color: var(--text); background: var(--bg2); }
 
   /* Setup banner */
   .setup-banner { background: #E6F1FB; border: 0.5px solid #B5D4F4; border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.25rem; font-size: 13px; color: #0C447C; line-height: 1.6; }
@@ -63,9 +82,9 @@
   .add-btn:hover { background: var(--bg3); }
   .add-btn:active { transform: scale(0.98); }
 
-  /* Filters */
+  /* Filters — now multi-select toggles */
   .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
-  .fb { font-size: 12px; padding: 5px 11px; border-radius: 20px; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text2); cursor: pointer; }
+  .fb { font-size: 12px; padding: 5px 11px; border-radius: 20px; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text2); cursor: pointer; user-select: none; }
   .fb.active { background: var(--bg3); color: var(--text); border-color: var(--border2); font-weight: 500; }
 
   /* Section headers */
@@ -78,7 +97,7 @@
   .acc1{border-left-color:#E24B4A;} .acc2{border-left-color:#639922;} .acc3{border-left-color:#B4B2A9;} .acc4{border-left-color:#BA7517;}
   .item.cleared { opacity: .4; }
 
-  /* Item top row (always visible) */
+  /* Item top row */
   .item-row { padding: .8rem 1rem; display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
   .item-row:hover { background: var(--bg2); }
   .item.expanded .item-row { background: var(--bg2); }
@@ -106,7 +125,7 @@
 
   .item-note { font-size: 12px; color: var(--text2); margin-top: 4px; font-style: italic; }
 
-  /* Priority quick-tap buttons on item row */
+  /* Priority quick-tap buttons */
   .pri-btns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; margin-top: 1px; }
   .pri-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 13px; padding: 1px 3px; line-height: 1; border-radius: 4px; }
   .pri-btn:hover { background: var(--bg3); color: var(--text); }
@@ -122,7 +141,7 @@
   .edit-field { width: 100%; padding: 7px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; margin-bottom: 7px; }
   .edit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 7px; }
   .edit-row select { margin-bottom: 0; }
-  .edit-row select, .edit-row .pri-select { width: 100%; padding: 7px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; }
+  .edit-row select { width: 100%; padding: 7px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; }
   .edit-actions { display: flex; gap: 7px; margin-top: 2px; }
   .edit-save { flex: 1; padding: 7px; border-radius: var(--radius); border: 0.5px solid #378ADD; background: #E6F1FB; color: #185FA5; font-size: 13px; cursor: pointer; font-weight: 500; }
   .edit-save:hover { background: #d0e8f8; }
@@ -155,7 +174,14 @@
 </head>
 <body>
 <div class="app">
-  <h1><i class="ti ti-chart-bar"></i> Energy tracker</h1>
+  <h1>
+    <i class="ti ti-chart-bar"></i> Energy tracker
+    <span class="h1-right">
+      <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark mode">
+        <i class="ti ti-sun" id="theme-icon"></i>
+      </button>
+    </span>
+  </h1>
 
   <div class="setup-banner" id="setup-banner">
     <strong>One-time setup:</strong> Paste your Google Apps Script URL below to connect your Google Sheet.
@@ -185,10 +211,12 @@
     <button class="add-btn" onclick="addItem()"><i class="ti ti-plus"></i> Add</button>
   </div>
 
-  <div class="filters">
-    <button class="fb active" onclick="setFilter('all',this)">All</button>
-    <button class="fb" onclick="setFilter('work',this)">Work</button>
-    <button class="fb" onclick="setFilter('personal',this)">Personal</button>
+  <!-- Filter pills — multi-select toggles -->
+  <div class="filters" id="filters">
+    <button class="fb active" data-f="all"        onclick="toggleFilter('all',this)">All</button>
+    <button class="fb"        data-f="work"       onclick="toggleFilter('work',this)">Work</button>
+    <button class="fb"        data-f="personal"   onclick="toggleFilter('personal',this)">Personal</button>
+    <button class="fb"        data-f="prioritized" onclick="toggleFilter('prioritized',this)">⭐ Prioritized</button>
   </div>
 
   <div id="list"></div>
@@ -202,8 +230,6 @@ const CATS = {
   '4': { label: 'Taking energy', short: 'Draining', cls: 'b4', acc: 'acc4', dot: 'd4' }
 };
 
-// Priority: 0=high-high (!!), 1=high (!), 2=normal, 3=low
-// Sort uses this number ascending so 0 floats to top
 const PRI = {
   '0': { label: '!! Top', badge: '!!', cls: 'pri-high2', selCls: 'sel-high2' },
   '1': { label: '! High', badge: '!',  cls: 'pri-high',  selCls: 'sel-high' },
@@ -214,8 +240,49 @@ const PRI = {
 const CAT_ORDER = ['1','2','3','4'];
 
 let items = [];
-let filter = 'all';
-let expandedId = null; // which item's edit panel is open
+let expandedId = null;
+
+// activeFilters: a Set of active filter keys.
+// Rules:
+//   'all' is the default / reset state — shown alone, means no filtering
+//   'work', 'personal', 'prioritized' can be combined freely
+//   Activating any specific filter deactivates 'all', and vice versa
+let activeFilters = new Set(['all']);
+
+// ── Theme ────────────────────────────────────────────────────────────────────
+const savedTheme = localStorage.getItem('et_theme'); // 'light' | 'dark' | null
+if (savedTheme) {
+  document.documentElement.classList.add(savedTheme);
+}
+updateThemeIcon();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.classList.contains('dark') ||
+    (!html.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if (isDark) {
+    html.classList.remove('dark');
+    html.classList.add('light');
+    localStorage.setItem('et_theme', 'light');
+  } else {
+    html.classList.remove('light');
+    html.classList.add('dark');
+    localStorage.setItem('et_theme', 'dark');
+  }
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const html = document.documentElement;
+  const isDark = html.classList.contains('dark') ||
+    (!html.classList.contains('light') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const icon = document.getElementById('theme-icon');
+  if (icon) {
+    icon.className = isDark ? 'ti ti-moon' : 'ti ti-sun';
+  }
+}
+
+// ── Script URL / data loading ─────────────────────────────────────────────────
 let SCRIPT_URL = localStorage.getItem('et_script_url') || '';
 
 if (SCRIPT_URL) {
@@ -223,6 +290,7 @@ if (SCRIPT_URL) {
   loadFromSheet();
 } else {
   try { items = JSON.parse(localStorage.getItem('et_items') || '[]'); } catch(e) { items = []; }
+  normalizeItems();
   render();
 }
 
@@ -242,24 +310,28 @@ function setStatus(msg, cls) {
   el.className = 'sync-status ' + (cls || '');
 }
 
+function normalizeItems() {
+  items = items.map(i => ({
+    ...i,
+    cat: String(i.cat),
+    pri: i.pri !== undefined ? String(i.pri) : '2'
+  }));
+}
+
 async function loadFromSheet() {
   if (!SCRIPT_URL) return;
   setStatus('Loading…', '');
   try {
     const res = await fetch(SCRIPT_URL + '?action=get');
     const data = await res.json();
-    items = data.map(i => ({
-      ...i,
-      cat: String(i.cat),
-      pri: i.pri !== undefined ? String(i.pri) : '2'
-    }));
+    items = data;
+    normalizeItems();
     localStorage.setItem('et_items', JSON.stringify(items));
     setStatus('Synced ' + new Date().toLocaleTimeString(), 'ok');
     render();
   } catch(e) {
     try { items = JSON.parse(localStorage.getItem('et_items') || '[]'); } catch(e2) { items = []; }
-    // Ensure pri field exists on cached items
-    items = items.map(i => ({ ...i, pri: i.pri !== undefined ? String(i.pri) : '2' }));
+    normalizeItems();
     setStatus('Offline — showing cached data', 'error');
     render();
   }
@@ -280,6 +352,43 @@ async function syncToSheet(action, payload) {
   localStorage.setItem('et_items', JSON.stringify(items));
 }
 
+// ── Filters ──────────────────────────────────────────────────────────────────
+function toggleFilter(key, el) {
+  if (key === 'all') {
+    // All resets everything
+    activeFilters = new Set(['all']);
+  } else {
+    activeFilters.delete('all');
+    if (activeFilters.has(key)) {
+      activeFilters.delete(key);
+      if (activeFilters.size === 0) activeFilters.add('all'); // back to All if nothing left
+    } else {
+      activeFilters.add(key);
+    }
+  }
+  expandedId = null;
+  updateFilterUI();
+  render();
+}
+
+function updateFilterUI() {
+  document.querySelectorAll('.fb').forEach(b => {
+    b.classList.toggle('active', activeFilters.has(b.dataset.f));
+  });
+}
+
+// ── Stat box filter (clicking Risk/Energizing/etc sets category view) ─────────
+function setStatFilter(cat) {
+  // Stat box click: set to single-category view (replaces current filter)
+  activeFilters = new Set([cat]);
+  expandedId = null;
+  document.querySelectorAll('.fb').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.stat').forEach(s => s.classList.remove('active-stat'));
+  document.getElementById('stat-' + cat).classList.add('active-stat');
+  render();
+}
+
+// ── Item actions ──────────────────────────────────────────────────────────────
 function addItem() {
   const name = document.getElementById('f-name').value.trim();
   if (!name) { document.getElementById('f-name').focus(); return; }
@@ -318,7 +427,6 @@ function del(id, e) {
   syncToSheet('delete', { id });
 }
 
-// Cycle priority via quick-tap buttons: up arrow raises, down arrow lowers
 function changePri(id, direction, e) {
   e.stopPropagation();
   const it = items.find(i => i.id === id);
@@ -332,7 +440,6 @@ function changePri(id, direction, e) {
 }
 
 function toggleExpand(id, e) {
-  // Don't expand if they clicked a button inside the row
   if (e.target.closest('.chk') || e.target.closest('.del-btn') || e.target.closest('.pri-btn')) return;
   expandedId = expandedId === id ? null : id;
   render();
@@ -342,10 +449,9 @@ function saveEdit(id) {
   const it = items.find(i => i.id === id);
   if (!it) return;
   it.name = document.getElementById('edit-name-' + id).value.trim() || it.name;
-  it.cat  = document.getElementById('edit-cat-' + id).value;
-  it.tag  = document.getElementById('edit-tag-' + id).value;
+  it.cat  = document.getElementById('edit-cat-'  + id).value;
+  it.tag  = document.getElementById('edit-tag-'  + id).value;
   it.note = document.getElementById('edit-note-' + id).value.trim();
-  // Read selected priority from selector buttons
   const sel = document.querySelector(`#edit-pri-${id} .pri-opt.selected`);
   if (sel) it.pri = sel.dataset.val;
   expandedId = null;
@@ -353,63 +459,58 @@ function saveEdit(id) {
   syncToSheet('update', { item: it });
 }
 
-function cancelEdit() {
-  expandedId = null;
-  render();
-}
+function cancelEdit() { expandedId = null; render(); }
 
 function selectPri(id, val) {
   document.querySelectorAll(`#edit-pri-${id} .pri-opt`).forEach(el => {
-    el.className = 'pri-opt' + (el.dataset.val === val ? ' selected ' + PRI[el.dataset.val].selCls : '');
+    const isSelected = el.dataset.val === val;
+    el.className = 'pri-opt' + (isSelected ? ' selected ' + PRI[el.dataset.val].selCls : '');
   });
 }
 
-function setStatFilter(cat) {
-  filter = cat;
-  expandedId = null;
-  document.querySelectorAll('.fb').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.stat').forEach(s => s.classList.remove('active-stat'));
-  document.getElementById('stat-' + cat).classList.add('active-stat');
-  render();
-}
-
-function setFilter(f, el) {
-  filter = f;
-  expandedId = null;
-  document.querySelectorAll('.fb').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.stat').forEach(s => s.classList.remove('active-stat'));
-  el.classList.add('active');
-  render();
-}
-
+// ── Sorting & visibility ──────────────────────────────────────────────────────
 function sortItems(arr) {
   return [...arr].sort((a, b) => {
-    // cleared always last
     if (a.cleared !== b.cleared) return a.cleared ? 1 : -1;
-    // within same cleared state: by priority (lower number = higher priority)
-    const pa = parseInt(a.pri || '2');
-    const pb = parseInt(b.pri || '2');
+    const pa = parseInt(a.pri || '2'), pb = parseInt(b.pri || '2');
     if (pa !== pb) return pa - pb;
-    // then by date added descending (newest first within same priority)
     return (b.added || '').localeCompare(a.added || '');
   });
 }
 
 function visible() {
-  if (filter === 'all')      return items;
-  if (filter === 'work')     return items.filter(i => i.tag === 'work' && !i.cleared);
-  if (filter === 'personal') return items.filter(i => i.tag === 'personal' && !i.cleared);
-  if (CAT_ORDER.includes(filter)) return items.filter(i => i.cat === filter);
-  return items;
+  // Category filter from stat box click (single cat key in activeFilters)
+  const catFilter = [...activeFilters].find(f => CAT_ORDER.includes(f));
+  if (catFilter) return items.filter(i => i.cat === catFilter);
+
+  // Pill filters — combine as AND
+  const wantWork       = activeFilters.has('work');
+  const wantPersonal   = activeFilters.has('personal');
+  const wantPrioritized = activeFilters.has('prioritized');
+  const isAll          = activeFilters.has('all');
+
+  if (isAll) return items.filter(i => !i.cleared);
+
+  return items.filter(i => {
+    if (i.cleared) return false;
+    if (wantWork && wantPersonal) {
+      // both selected = show both tags
+    } else if (wantWork && i.tag !== 'work') return false;
+    else if (wantPersonal && i.tag !== 'personal') return false;
+    if (wantPrioritized && parseInt(i.pri || '2') >= 2) return false;
+    return true;
+  });
 }
 
+// ── Render ────────────────────────────────────────────────────────────────────
 function render() {
   // Stats
   const counts = {'1':0,'2':0,'3':0,'4':0};
   items.filter(i => !i.cleared).forEach(i => { if (counts[i.cat] !== undefined) counts[i.cat]++; });
+  const catFilter = [...activeFilters].find(f => CAT_ORDER.includes(f));
   document.getElementById('stats').innerHTML = CAT_ORDER.map(k => {
     const c = CATS[k];
-    const isActive = filter === k;
+    const isActive = catFilter === k;
     return `<div class="stat s${k}${isActive ? ' active-stat' : ''}" id="stat-${k}"
       onclick="setStatFilter('${k}')" role="button" tabindex="0"
       onkeydown="if(event.key==='Enter')setStatFilter('${k}')">
@@ -418,16 +519,18 @@ function render() {
     </div>`;
   }).join('');
 
+  updateFilterUI();
+
   const vis = visible();
   const listEl = document.getElementById('list');
   if (!vis.length) { listEl.innerHTML = '<div class="empty">Nothing here</div>'; return; }
 
   let html = '';
-  if (CAT_ORDER.includes(filter)) {
-    // Single category — flat sorted list
+  if (catFilter) {
+    // Single category from stat box — flat sorted list
     sortItems(vis).forEach(i => { html += itemHTML(i); });
   } else {
-    // All / Work / Personal — grouped by category in fixed order
+    // Pill filters — group by category in fixed order
     CAT_ORDER.forEach(k => {
       const group = vis.filter(i => i.cat === k);
       if (!group.length) return;
@@ -445,20 +548,18 @@ function itemHTML(i) {
   const priInfo = PRI[pri];
   const isExpanded = expandedId === i.id;
 
-  // Priority quick-tap buttons
-  const upActive  = pri < '2' ? 'pri-active' : '';
-  const downActive = pri > '2' ? 'pri-active' : '';
+  const upActive   = parseInt(pri) < 2 ? 'pri-active' : '';
+  const downActive = parseInt(pri) > 2 ? 'pri-active' : '';
+
   const priBtns = `<div class="pri-btns">
-    <button class="pri-btn ${upActive}" onclick="changePri(${i.id},'up',event)" title="Raise priority">▲</button>
+    <button class="pri-btn ${upActive}"   onclick="changePri(${i.id},'up',event)"   title="Raise priority">▲</button>
     <button class="pri-btn ${downActive}" onclick="changePri(${i.id},'down',event)" title="Lower priority">▼</button>
   </div>`;
 
-  // Priority badge (only shown when not normal)
   const priBadge = priInfo.badge
     ? `<span class="pri-badge ${priInfo.cls}">${priInfo.badge}</span>`
     : '';
 
-  // Inline edit panel
   const editPanel = `<div class="item-edit">
     <div class="edit-label">Name</div>
     <input class="edit-field" id="edit-name-${i.id}" value="${i.name.replace(/"/g,'&quot;')}" />
@@ -483,35 +584,35 @@ function itemHTML(i) {
     <div class="edit-label">Priority</div>
     <div class="pri-selector" id="edit-pri-${i.id}">
       ${['0','1','2','3'].map(v => {
-        const sel = v === pri ? 'selected ' + PRI[v].selCls : '';
-        return `<div class="pri-opt ${sel}" data-val="${v}" onclick="selectPri(${i.id},'${v}')">${PRI[v].label}</div>`;
+        const isSel = v === pri;
+        return `<div class="pri-opt${isSel ? ' selected ' + PRI[v].selCls : ''}" data-val="${v}" onclick="selectPri(${i.id},'${v}')">${PRI[v].label}</div>`;
       }).join('')}
     </div>
     <div class="edit-label">Note</div>
     <input class="edit-field" id="edit-note-${i.id}" value="${(i.note||'').replace(/"/g,'&quot;')}" placeholder="Optional note" />
     <div class="edit-actions">
-      <button class="edit-save" onclick="saveEdit(${i.id})">Save</button>
+      <button class="edit-save"   onclick="saveEdit(${i.id})">Save</button>
       <button class="edit-cancel" onclick="cancelEdit()">Cancel</button>
     </div>
   </div>`;
 
-  return `<div class="item ${c.acc} ${i.cleared ? 'cleared' : ''} ${isExpanded ? 'expanded' : ''}" id="item-${i.id}">
-    <div class="item-row" onclick="toggleExpand(${i.id}, event)">
-      <div class="chk ${i.cleared ? 'on' : ''}" onclick="toggle(${i.id}, event)" role="checkbox" aria-checked="${i.cleared}" tabindex="0">
+  return `<div class="item ${c.acc} ${i.cleared?'cleared':''} ${isExpanded?'expanded':''}" id="item-${i.id}">
+    <div class="item-row" onclick="toggleExpand(${i.id},event)">
+      <div class="chk ${i.cleared?'on':''}" onclick="toggle(${i.id},event)" role="checkbox" aria-checked="${i.cleared}" tabindex="0">
         ${i.cleared ? '<i class="ti ti-check"></i>' : ''}
       </div>
       <div class="item-body">
-        <div class="item-name ${i.cleared ? 'cleared' : ''}">${i.name}</div>
+        <div class="item-name ${i.cleared?'cleared':''}">${i.name}</div>
         <div class="item-meta">
           <span class="badge ${c.cls}">${c.short}</span>
-          <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}">${i.tag}</span>
+          <span class="badge ${i.tag==='work'?'bwork':'bpersonal'}">${i.tag}</span>
           ${priBadge}
           ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
         </div>
         ${i.note ? `<div class="item-note">${i.note}</div>` : ''}
       </div>
       ${priBtns}
-      <button class="del-btn" onclick="del(${i.id}, event)" aria-label="Remove"><i class="ti ti-trash"></i></button>
+      <button class="del-btn" onclick="del(${i.id},event)" aria-label="Remove"><i class="ti ti-trash"></i></button>
     </div>
     ${editPanel}
   </div>`;
