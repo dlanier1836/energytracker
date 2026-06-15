@@ -175,7 +175,7 @@ async function loadFromSheet() {
   try {
     const res = await fetch(SCRIPT_URL + '?action=get');
     const data = await res.json();
-    items = data;
+    items = data.map(i => ({ ...i, cat: String(i.cat) }));
     localStorage.setItem('et_items', JSON.stringify(items));
     setStatus('Synced ' + new Date().toLocaleTimeString(), 'ok');
     render();
