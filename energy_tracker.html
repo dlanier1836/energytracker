@@ -54,9 +54,17 @@
   .form-card input, .form-card select { width: 100%; padding: 8px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); font-size: 14px; margin-bottom: 8px; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .form-row select { margin-bottom: 0; }
-  .add-btn { width: 100%; padding: 9px; margin-top: 4px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
-  .add-btn:hover { background: var(--bg3); }
+  .add-btn { width: 100%; padding: 9px; margin-top: 4px; border-radius: var(--radius); border: 0.5px solid #85C1E9; background: #D6EAF8; color: #1A5276; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s; }
+  .add-btn:hover { background: #AED6F1; }
   .add-btn:active { transform: scale(0.98); }
+  @keyframes addflash { 0%{background:#5DADE2;} 60%{background:#AED6F1;} 100%{background:#D6EAF8;} }
+  .add-btn.flashing { animation: addflash 0.5s ease-out forwards; }
+  /* Deadline display */
+  .deadline { font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 20px; }
+  .dl-future  { background: #EAF3DE; color: #3B6D11; }
+  .dl-soon    { background: #FAEEDA; color: #854F0B; }
+  .dl-today   { background: #FFD700; color: #5A3800; }
+  .dl-overdue { background: #FCEBEB; color: #A32D2D; }
 
   /* Filters — now multi-select toggles */
   .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
@@ -100,6 +108,7 @@
   .pri-low   { background: #EBEBEB; color: #666; }
 
   .item-note { font-size: 12px; color: var(--text2); margin-top: 4px; font-style: italic; }
+  .edit-field[type=date] { color-scheme: light dark; }
 
   /* Priority quick-tap buttons */
   .pri-btns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; margin-top: 1px; }
@@ -190,9 +199,9 @@
         <option value="1">! High priority</option>
         <option value="3">↓ Low priority</option>
       </select>
-      <input type="text" id="f-note" placeholder="Note (optional)" style="margin-bottom:0" />
+      <input type="date" id="f-deadline" style="margin-bottom:0" title="Deadline (optional)" />
     </div>
-    <button class="add-btn" onclick="addItem()"><i class="ti ti-plus"></i> Add</button>
+    <button class="add-btn" id="add-btn" onclick="addItem()"><i class="ti ti-plus"></i> Add</button>
   </div>
 
   <!-- Filter pills — multi-select toggles -->
@@ -299,7 +308,8 @@ function normalizeItems() {
     ...i,
     cat: String(i.cat),
     pri: i.pri !== undefined ? String(i.pri) : '2',
-    added: i.added ? String(i.added).slice(0, 10) : ''
+    added: i.added ? String(i.added).slice(0, 10) : '',
+    deadline: i.deadline ? String(i.deadline).slice(0, 10) : ''
   }));
 }
 
@@ -382,15 +392,21 @@ function addItem() {
     name,
     cat: document.getElementById('f-cat').value,
     tag: document.getElementById('f-tag').value,
-    note: document.getElementById('f-note').value.trim(),
+    deadline: document.getElementById('f-deadline').value || '',
     cleared: false,
     added: new Date().toISOString().slice(0,10),
     pri: document.getElementById('f-pri').value
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
-  document.getElementById('f-note').value = '';
+  document.getElementById('f-deadline').value = '';
   document.getElementById('f-pri').value = '2';
+  // Flash the add button
+  const btn = document.getElementById('add-btn');
+  btn.classList.remove('flashing');
+  void btn.offsetWidth; // force reflow to restart animation
+  btn.classList.add('flashing');
+  setTimeout(() => btn.classList.remove('flashing'), 600);
   render();
   syncToSheet('add', { item });
 }
@@ -434,10 +450,10 @@ function toggleExpand(id, e) {
 function saveEdit(id) {
   const it = items.find(i => i.id === id);
   if (!it) return;
-  it.name = document.getElementById('edit-name-' + id).value.trim() || it.name;
-  it.cat  = document.getElementById('edit-cat-'  + id).value;
-  it.tag  = document.getElementById('edit-tag-'  + id).value;
-  it.note = document.getElementById('edit-note-' + id).value.trim();
+  it.name     = document.getElementById('edit-name-'     + id).value.trim() || it.name;
+  it.cat      = document.getElementById('edit-cat-'      + id).value;
+  it.tag      = document.getElementById('edit-tag-'      + id).value;
+  it.deadline = document.getElementById('edit-deadline-' + id).value || '';
   const sel = document.querySelector(`#edit-pri-${id} .pri-opt.selected`);
   if (sel) it.pri = sel.dataset.val;
   expandedId = null;
@@ -486,6 +502,20 @@ function visible() {
     if (wantPrioritized && parseInt(i.pri || '2') >= 2) return false;
     return true;
   });
+}
+
+// ── Deadline helper ──────────────────────────────────────────────────────────
+function deadlineHTML(deadline) {
+  if (!deadline) return '';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due   = new Date(deadline + 'T00:00:00');
+  const diff  = Math.round((due - today) / 86400000);
+  let cls, label;
+  if (diff < 0)      { cls = 'dl-overdue'; label = Math.abs(diff) + 'd overdue'; }
+  else if (diff === 0) { cls = 'dl-today';   label = 'due today'; }
+  else if (diff <= 3)  { cls = 'dl-soon';    label = 'in ' + diff + 'd'; }
+  else                 { cls = 'dl-future';  label = 'in ' + diff + 'd'; }
+  return `<span class="deadline ${cls}">${label}</span>`;
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -574,8 +604,8 @@ function itemHTML(i) {
         return `<div class="pri-opt${isSel ? ' selected ' + PRI[v].selCls : ''}" data-val="${v}" onclick="selectPri(${i.id},'${v}')">${PRI[v].label}</div>`;
       }).join('')}
     </div>
-    <div class="edit-label">Note</div>
-    <input class="edit-field" id="edit-note-${i.id}" value="${(i.note||'').replace(/"/g,'&quot;')}" placeholder="Optional note" />
+    <div class="edit-label">Deadline (optional)</div>
+    <input type="date" class="edit-field" id="edit-deadline-${i.id}" value="${i.deadline||''}" />
     <div class="edit-actions">
       <button class="edit-save"   onclick="saveEdit(${i.id})">Save</button>
       <button class="edit-cancel" onclick="cancelEdit()">Cancel</button>
@@ -593,9 +623,8 @@ function itemHTML(i) {
           <span class="badge ${c.cls}">${c.short}</span>
           <span class="badge ${i.tag==='work'?'bwork':'bpersonal'}">${i.tag}</span>
           ${priBadge}
-          ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
+          ${deadlineHTML(i.deadline)}
         </div>
-        ${i.note ? `<div class="item-note">${i.note}</div>` : ''}
       </div>
       ${priBtns}
       <button class="del-btn" onclick="del(${i.id},event)" aria-label="Remove"><i class="ti ti-trash"></i></button>
