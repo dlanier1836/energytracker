@@ -354,17 +354,20 @@ function saveScriptUrl() {
 
 // ── Data helpers ──────────────────────────────────────────
 function normalize(r) {
+  const cat = String(r.cat || '3').trim();
+  const added = (r.added || '');
+  const addedClean = /\d{4}-\d{2}-\d{2}/.test(added) ? added.slice(0,10) : '';
   return {
     id:       Number(r.id),
     name:     r.name  || '',
-    cat:      String(r.cat || '3'),
+    cat:      ['1','2','3','4'].includes(cat) ? cat : '3',
     tag:      r.tag   || 'work',
     note:     r.note  || '',
-    cleared:  String(r.cleared).toUpperCase() === 'TRUE',
-    added:    (r.added || '').slice(0, 10),
-    pri:      String(r.pri != null ? r.pri : '2'),
+    cleared:  r.cleared === true || String(r.cleared).toUpperCase() === 'TRUE',
+    added:    addedClean,
+    pri:      String(r.pri != null && r.pri !== '' ? r.pri : '2'),
     deadline: r.deadline || '',
-    starred:  String(r.starred).toUpperCase() === 'TRUE',
+    starred:  r.starred === true || String(r.starred).toUpperCase() === 'TRUE',
   };
 }
 
@@ -385,7 +388,8 @@ async function loadItems() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
-    items = (data.items || []).map(normalize);
+    const arr = Array.isArray(data) ? data : (data.items || []);
+    items = arr.map(normalize);
     localStorage.setItem('itemsCache', JSON.stringify(items));
     setSyncStatus('Synced', 'sync-ok');
     render();
