@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Energy Tracker</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23F97316' d='M11 21h-1l1-7H7a1 1 0 0 1-.78-1.63l7-10 .78.63L8.22 13H13a1 1 0 0 1 .78 1.63l-3 4.3L11 21z'/></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='4' fill='white'/><path fill='%23F97316' d='M11 21h-1l1-7H7a1 1 0 0 1-.78-1.63l7-10 .78.63L8.22 13H13a1 1 0 0 1 .78 1.63l-3 4.3L11 21z'/></svg>">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
   :root {
@@ -1015,8 +1015,8 @@ function itemHTML(i) {
         </div>
         ${i.note ? `<div class="item-note">${i.note}</div>` : ''}
       </div>
-      ${starBtn}
       ${priBtns}
+      ${starBtn}
       <button class="del-btn" onclick="del(${i.id}, event)" aria-label="Remove"><i class="ti ti-trash"></i></button>
     </div>
     ${editPanel}
@@ -1456,11 +1456,11 @@ function renderOutreach() {
       </div>
       ${priBadge}
       <button class="ping-btn" onclick="pingOutreach(${o.id}, event)" title="Log a ping">ping</button>
-      <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
       <div class="outreach-pri-btns">
         <button class="outreach-pri-btn ${upActive}"   onclick="changeOutreachPri(${o.id},'up',event)">▲</button>
         <button class="outreach-pri-btn ${downActive}" onclick="changeOutreachPri(${o.id},'down',event)">▼</button>
       </div>
+      <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
       <button class="outreach-del" onclick="deleteOutreach(${o.id}, event)" aria-label="Remove"><i class="ti ti-x"></i></button>
     </div>`;
   }).join('');
