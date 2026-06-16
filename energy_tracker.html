@@ -887,7 +887,6 @@ function render() {
 
   const vis = visible();
   const listEl = document.getElementById('list');
-  if (!vis.length) { listEl.innerHTML = '<div class="empty">Nothing here</div>'; return; }
 
   const isTodayView = activePills.has('starred') && !activePills.has('prioritized') && !activePills.has('work') && !activePills.has('personal');
 
@@ -911,19 +910,12 @@ function render() {
 
   // Inject outreach — in Today view only show starred outreach
   const ovis = visibleOutreach();
-  if (ovis.length) {
-    let ohtml = '';
-    if (activePills.has('starred') || activePills.has('prioritized')) {
-      ohtml = ovis.map(outreachItemHTML).join('');
-    }
-    if (!vis.length) {
-      listEl.innerHTML = ohtml || '<div class="empty">Nothing here</div>';
-    } else {
-      listEl.innerHTML = html + ohtml;
-    }
-  } else {
-    listEl.innerHTML = html || '<div class="empty">Nothing here</div>';
+  let ohtml = '';
+  if (ovis.length && (activePills.has('starred') || activePills.has('prioritized'))) {
+    ohtml = ovis.map(outreachItemHTML).join('');
   }
+  const combined = html + ohtml;
+  listEl.innerHTML = combined || '<div class="empty">Nothing here</div>';
 }
 
 function itemHTML(i) {
@@ -1054,20 +1046,27 @@ function updateFocusDisplay() {
   document.getElementById('focus-total-display').textContent =
     (h > 0 ? h + 'h ' : '') + m + 'm focus today';
 
-  // 10 boxes × 30 min = 5 hrs max
+  // 10 boxes × 30 min = 5 hrs max — each box fills incrementally
   const BOXES = 10;
   const MINS_PER_BOX = 30;
   const boxesEl = document.getElementById('focus-boxes');
-  let html = '';
+  let bhtml = '';
   for (let i = 0; i < BOXES; i++) {
     const boxStart = i * MINS_PER_BOX;
     const boxEnd   = boxStart + MINS_PER_BOX;
-    let cls = '';
-    if (totalMins >= boxEnd)   cls = 'full';
-    else if (totalMins > boxStart) cls = 'partial';
-    html += `<div class="focus-box ${cls}" title="${boxEnd}min"></div>`;
+    if (totalMins >= boxEnd) {
+      // fully filled
+      bhtml += `<div class="focus-box" style="background:#3A9E6C;border-color:#3A9E6C" title="${boxEnd}min"></div>`;
+    } else if (totalMins > boxStart) {
+      // partially filled — show fill % as gradient
+      const pct = Math.round(((totalMins - boxStart) / MINS_PER_BOX) * 100);
+      bhtml += `<div class="focus-box" style="background:linear-gradient(to right,#3A9E6C ${pct}%,var(--bg3) ${pct}%);border-color:var(--border)" title="${totalMins - boxStart}/${MINS_PER_BOX}min"></div>`;
+    } else {
+      // empty
+      bhtml += `<div class="focus-box" title="${boxEnd}min"></div>`;
+    }
   }
-  boxesEl.innerHTML = html;
+  boxesEl.innerHTML = bhtml;
 }
 
 function setDuration(min) {
