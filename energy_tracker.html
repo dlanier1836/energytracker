@@ -380,9 +380,10 @@
         <span class="outreach-count" id="outreach-count">0 remaining</span>
       </div>
       <div class="outreach-type-toggle" onclick="event.stopPropagation()">
-        <button class="outreach-type-btn active" id="otype-all"  onclick="setOutreachType('all')">All</button>
-        <button class="outreach-type-btn"        id="otype-call" onclick="setOutreachType('call')">Calls</button>
-        <button class="outreach-type-btn"        id="otype-email" onclick="setOutreachType('email')">Emails</button>
+        <button class="outreach-type-btn active" id="otype-all"      onclick="setOutreachType('all')">All</button>
+        <button class="outreach-type-btn"        id="otype-call"     onclick="setOutreachType('call')">Calls</button>
+        <button class="outreach-type-btn"        id="otype-email"    onclick="setOutreachType('email')">Emails</button>
+        <button class="outreach-type-btn"        id="otype-linkedin" onclick="setOutreachType('linkedin')">LinkedIn</button>
       </div>
       <i class="ti ti-chevron-down outreach-chevron" aria-hidden="true"></i>
     </div>
@@ -392,6 +393,7 @@
         <select id="o-type">
           <option value="call">Call</option>
           <option value="email">Email</option>
+          <option value="linkedin">LinkedIn</option>
         </select>
         <button onclick="addOutreach()">Add</button>
       </div>
@@ -1137,6 +1139,17 @@ async function toggleOutreachStar(id, e) {
   await outreachPost({ action: 'updateOutreach', item: o });
 }
 
+async function cycleOutreachType(id, e) {
+  e.stopPropagation();
+  const o = outreachItems.find(x => x.id === id);
+  if (!o) return;
+  const cycle = ['call','email','linkedin'];
+  const idx = cycle.indexOf(o.type);
+  o.type = cycle[(idx + 1) % cycle.length];
+  renderOutreach();
+  await outreachPost({ action: 'updateOutreach', item: o });
+}
+
 async function changeOutreachPri(id, dir, e) {
   e.stopPropagation();
   const o = outreachItems.find(x => x.id === id);
@@ -1198,13 +1211,14 @@ function renderOutreach() {
     const upActive   = parseInt(pri) < 2 ? 'active' : '';
     const downActive = parseInt(pri) > 2 ? 'active' : '';
     const dotCls = O_CAT_DOT[o.cat] || 'e3';
-    const typeIcon = o.type === 'email' ? 'ti-mail' : 'ti-phone';
+    const typeIcon = o.type === 'email' ? 'ti-mail' : o.type === 'linkedin' ? 'ti-brand-linkedin' : 'ti-phone';
+    const typeTitle = o.type === 'email' ? 'Email' : o.type === 'linkedin' ? 'LinkedIn' : 'Call';
     return `<div class="outreach-row">
       <div class="outreach-chk ${o.done ? 'done' : ''}" onclick="toggleOutreachDone(${o.id}, event)">
         ${o.done ? '<i class="ti ti-check"></i>' : ''}
       </div>
       <div class="e-dot ${dotCls}" onclick="cycleOutreachCat(${o.id}, event)" title="Tap to set energy type"></div>
-      <i class="ti ${typeIcon} outreach-icon" aria-hidden="true"></i>
+      <i class="ti ${typeIcon} outreach-icon" onclick="cycleOutreachType(${o.id}, event)" style="cursor:pointer" title="Tap to change type (${typeTitle})" aria-hidden="true"></i>
       <span class="outreach-name ${o.done ? 'done' : ''}">${o.name}</span>
       ${priBadge}
       <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
@@ -1241,7 +1255,7 @@ function outreachItemHTML(o) {
   const priBadge = pb && pb.badge ? `<span class="pri-badge ${pb.cls}">${pb.badge}</span>` : '';
   const dotCls = O_CAT_DOT[o.cat] || 'e3';
   const accCls = O_CAT_ACC[o.cat] || 'acc-neut';
-  const typeIcon = o.type === 'email' ? 'ti-mail' : 'ti-phone';
+  const typeIcon = o.type === 'email' ? 'ti-mail' : o.type === 'linkedin' ? 'ti-brand-linkedin' : 'ti-phone';
   return `<div class="item ${accCls} ${o.starred ? 'starred-item' : ''}">
     <div class="item-row" style="cursor:default">
       <div class="outreach-chk ${o.done ? 'done' : ''}" onclick="toggleOutreachDone(${o.id}, event)">
