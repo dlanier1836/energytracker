@@ -194,6 +194,9 @@
 
   .del-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 4px; border-radius: var(--radius); display: flex; align-items: center; flex-shrink: 0; }
   .del-btn:hover { color: #D94848; background: #FDE8E8; }
+  /* Archive all button */
+  .archive-all-btn { font-size: 12px; color: var(--text3); background: none; border: 0.5px solid var(--border); padding: 5px 12px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
+  .archive-all-btn:hover { color: #7A4D10; border-color: #C47D24; background: #FEF3E2; }
 
   /* Inline edit panel */
   .item-edit { display: none; padding: 12px 16px 16px; border-top: 0.5px solid var(--border); background: var(--bg2); }
@@ -328,6 +331,7 @@
     <span class="pill" data-pill="personal" onclick="togglePill('personal')">Personal</span>
     <span class="pill" data-pill="prioritized" onclick="togglePill('prioritized')">!! Prioritized</span>
     <span class="pill starred-pill" data-pill="starred" onclick="togglePill('starred')">★ Today</span>
+    <button class="archive-all-btn" id="archive-all-btn" onclick="archiveAllCleared()" style="display:none">↓ Archive all cleared</button>
   </div>
 
   <!-- List -->
@@ -435,6 +439,7 @@ function normalize(r) {
     pri:      String(r.pri != null && r.pri !== '' ? r.pri : '2'),
     deadline: r.deadline || '',
     starred:  r.starred === true || String(r.starred).toUpperCase() === 'TRUE',
+    archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
   };
 }
 
@@ -456,7 +461,7 @@ async function loadItems() {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     const arr = Array.isArray(data) ? data : (data.items || []);
-    items = arr.map(normalize);
+    items = arr.map(normalize).filter(i => !i.archived);
     localStorage.setItem('itemsCache', JSON.stringify(items));
     setSyncStatus('Synced', 'sync-ok');
     render();
@@ -497,6 +502,7 @@ async function addItem() {
     pri:      document.getElementById('f-pri').value,
     deadline: '',
     starred:  false,
+    archived: false,
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
@@ -519,6 +525,18 @@ async function del(id, e) {
   if (expandedId === id) expandedId = null;
   render();
   await apiPost({ action: 'delete', id });
+}
+
+async function archiveAllCleared() {
+  const toArchive = items.filter(i => i.cleared);
+  if (!toArchive.length) return;
+  toArchive.forEach(i => { i.archived = true; });
+  items = items.filter(i => !i.cleared);
+  expandedId = null;
+  render();
+  for (const item of toArchive) {
+    await apiPost({ action: 'update', item });
+  }
 }
 
 async function changePri(id, dir, e) {
@@ -654,6 +672,9 @@ function render() {
   // Stats
   const counts = { '1':0, '2':0, '3':0, '4':0 };
   items.filter(i => !i.cleared).forEach(i => { if (counts[i.cat] !== undefined) counts[i.cat]++; });
+  // Show archive-all button only when cleared items exist
+  const archiveBtn = document.getElementById('archive-all-btn');
+  if (archiveBtn) archiveBtn.style.display = items.some(i => i.cleared) ? 'inline-block' : 'none';
   document.getElementById('stats').innerHTML = CAT_ORDER.map(k => {
     const c = CATS[k];
     return `<div class="stat ${c.statCls} ${catFilter===k ? 'active-stat' : ''}" id="stat-${k}"
