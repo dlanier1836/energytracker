@@ -103,24 +103,16 @@
   .pomo-progress-wrap { width: 100%; height: 4px; background: var(--bg3); border-radius: 2px; margin-top: 2px; }
   .pomo-progress-bar  { height: 4px; background: #3A9E6C; border-radius: 2px; transition: width .9s linear; width: 100%; }
 
-  /* Focus goal section */
+  /* Focus tank */
   .focus-section { width: 100%; padding-top: 10px; border-top: 0.5px solid var(--border); margin-top: 8px; }
-  .focus-header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
-  .focus-total { font-size: 15px; font-weight: 600; }
-  .focus-goal-label { font-size: 12px; color: var(--text2); }
-  .focus-goal-input { width: 40px; padding: 1px 5px; border-radius: 4px; border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); font-size: 12px; text-align: center; }
+  .focus-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .focus-total { font-size: 13px; font-weight: 500; color: var(--text2); }
   .focus-reset-btn { font-size: 11px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 2px 4px; border-radius: 4px; margin-left: auto; }
   .focus-reset-btn:hover { color: var(--text); background: var(--bg2); }
-  /* Chunked bar */
-  .focus-chunks-wrap { position: relative; height: 18px; background: var(--bg3); border-radius: 4px; overflow: hidden; margin-bottom: 5px; }
-  .focus-chunks-fill { display: flex; height: 100%; gap: 2px; padding: 2px; box-sizing: border-box; }
-  .focus-chunk { height: 100%; border-radius: 2px; background: #3A9E6C; flex-shrink: 0; transition: width .3s ease; }
-  .focus-chunk.partial { opacity: 0.5; }
-  .focus-goal-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text2); opacity: 0.4; border-radius: 1px; }
-  /* Legend */
-  .focus-legend { display: flex; align-items: center; gap: 12px; font-size: 11px; color: var(--text3); flex-wrap: wrap; }
-  .focus-legend-item { display: flex; align-items: center; gap: 4px; }
-  .focus-legend-swatch { width: 10px; height: 10px; border-radius: 2px; }
+  .focus-boxes { display: flex; gap: 4px; }
+  .focus-box { flex: 1; height: 16px; border-radius: 3px; background: var(--bg3); border: 0.5px solid var(--border); transition: background .4s ease, border-color .4s ease; }
+  .focus-box.full { background: #3A9E6C; border-color: #3A9E6C; }
+  .focus-box.partial { background: #3A9E6C; border-color: #3A9E6C; opacity: 0.4; }
 
   /* Add form */
   .add-form { background: var(--bg); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 10px; }
@@ -361,8 +353,8 @@
     <div class="pomo-display" id="pomo-display">25:00</div>
     <div class="pomo-status" id="pomo-status">Ready</div>
     <div class="pomo-presets">
-      <button class="pomo-preset" onclick="setDuration(15)">15 min</button>
-      <button class="pomo-preset active" onclick="setDuration(25)">25 min</button>
+      <button class="pomo-preset active" onclick="setDuration(15)">15 min</button>
+      <button class="pomo-preset" onclick="setDuration(30)">30 min</button>
       <button class="pomo-preset" onclick="setDuration(45)">45 min</button>
     </div>
     <div class="pomo-btns">
@@ -375,17 +367,9 @@
     <div class="focus-section">
       <div class="focus-header">
         <span class="focus-total" id="focus-total-display">0m focus today</span>
-        <span class="focus-goal-label">/ goal:
-          <input class="focus-goal-input" type="number" id="focus-goal-input" min="10" max="480" value="120" onchange="saveFocusGoal()" />
-          min
-        </span>
         <button class="focus-reset-btn" onclick="resetFocusDay()">↺ reset day</button>
       </div>
-      <div class="focus-chunks-wrap">
-        <div class="focus-chunks-fill" id="focus-chunks"></div>
-        <div class="focus-goal-line" id="focus-goal-line"></div>
-      </div>
-      <div class="focus-legend" id="focus-legend"></div>
+      <div class="focus-boxes" id="focus-boxes"></div>
     </div>
   </div>
 
@@ -870,15 +854,12 @@ function renderTodayView(vis) {
   ['0','1','2','3'].forEach(p => {
     const group = vis.filter(i => (i.pri||'2') === p);
     if (!group.length) return;
-    // Within group sort by cat then tag
     const sorted = group.slice().sort((a,b) => {
       const ca = CAT_SORT_ORDER[a.cat]??2, cb = CAT_SORT_ORDER[b.cat]??2;
       if (ca !== cb) return ca - cb;
       return (TAG_SORT_ORDER[a.tag]??1) - (TAG_SORT_ORDER[b.tag]??1);
     });
-    if (p !== '2') {
-      html += `<div class="section-hdr" style="color:var(--text2)">${PRI_LABELS[p]}</div>`;
-    }
+    html += `<div class="section-hdr" style="color:var(--text2)">${PRI_LABELS[p]}</div>`;
     sorted.forEach(i => { html += itemHTML(i); });
   });
   return html;
@@ -1034,7 +1015,7 @@ function itemHTML(i) {
 }
 
 // ── Pomodoro ──────────────────────────────────────────────
-let pomoSecs = 25*60, pomoRunning = false, pomoInterval = null, pomoDuration = 25;
+let pomoSecs = 15*60, pomoRunning = false, pomoInterval = null, pomoDuration = 15;
 
 // ── Focus tracking ───────────────────────────────────────
 // Sessions stored as array of {mins, duration} per day
@@ -1059,18 +1040,6 @@ function endFocusSession() {
   sessionStartSecs = null;
 }
 
-function saveFocusGoal() {
-  const val = parseInt(document.getElementById('focus-goal-input').value);
-  if (!isNaN(val) && val > 0) {
-    localStorage.setItem('focusGoalMins', String(val));
-    updateFocusDisplay();
-    // Flash the goal input green briefly to confirm save
-    const inp = document.getElementById('focus-goal-input');
-    inp.style.borderColor = '#3A9E6C';
-    inp.style.background  = '#E0F5EC';
-    setTimeout(() => { inp.style.borderColor = ''; inp.style.background = ''; }, 800);
-  }
-}
 function resetFocusDay() {
   localStorage.removeItem(todayKey());
   updateFocusDisplay();
@@ -1078,49 +1047,34 @@ function resetFocusDay() {
 
 function updateFocusDisplay() {
   const sessions = getSessions();
-  const goal = parseInt(localStorage.getItem('focusGoalMins') || '120');
-  document.getElementById('focus-goal-input').value = goal;
-
   const totalMins = sessions.reduce((s, x) => s + x.mins, 0);
+
+  // Label
   const h = Math.floor(totalMins / 60), m = totalMins % 60;
-  const totalLabel = (h > 0 ? h + 'h ' : '') + m + 'm focus today';
-  document.getElementById('focus-total-display').textContent = totalLabel;
+  document.getElementById('focus-total-display').textContent =
+    (h > 0 ? h + 'h ' : '') + m + 'm focus today';
 
-  // Build chunked bar
-  const wrap = document.getElementById('focus-chunks');
-  const wrapWidth = wrap.parentElement.offsetWidth || 300;
-  const pxPerMin = wrapWidth / goal; // goal fills 100% of bar
-
-  wrap.innerHTML = sessions.map(s => {
-    const w = Math.min(s.mins * pxPerMin - 2, wrapWidth);
-    const color = s.duration === 15 ? '#60a5fa'
-                : s.duration === 25 ? '#3A9E6C'
-                : '#8b5cf6'; // 45min
-    return `<div class="focus-chunk" style="width:${Math.max(4,w)}px;background:${color}" title="${s.mins}m session"></div>`;
-  }).join('');
-
-  // Goal line at 100% (right edge of goal area — stays hidden if over)
-  const goalLine = document.getElementById('focus-goal-line');
-  goalLine.style.display = totalMins < goal ? 'block' : 'none';
-  goalLine.style.left = '100%'; // always at right edge since bar = goal width
-
-  // Legend
-  const durations = [...new Set(sessions.map(s => s.duration))].sort((a,b)=>a-b);
-  const colors = { 15: '#60a5fa', 25: '#3A9E6C', 45: '#8b5cf6' };
-  const legendItems = durations.map(d =>
-    `<span class="focus-legend-item"><span class="focus-legend-swatch" style="background:${colors[d]||'#3A9E6C'}"></span>${d}min sessions</span>`
-  );
-  if (sessions.length) {
-    legendItems.push(`<span class="focus-legend-item" style="margin-left:auto">${Math.round((totalMins/goal)*100)}% of goal</span>`);
+  // 10 boxes × 30 min = 5 hrs max
+  const BOXES = 10;
+  const MINS_PER_BOX = 30;
+  const boxesEl = document.getElementById('focus-boxes');
+  let html = '';
+  for (let i = 0; i < BOXES; i++) {
+    const boxStart = i * MINS_PER_BOX;
+    const boxEnd   = boxStart + MINS_PER_BOX;
+    let cls = '';
+    if (totalMins >= boxEnd)   cls = 'full';
+    else if (totalMins > boxStart) cls = 'partial';
+    html += `<div class="focus-box ${cls}" title="${boxEnd}min"></div>`;
   }
-  document.getElementById('focus-legend').innerHTML = legendItems.join('') || '<span>Start a session to track focus time</span>';
+  boxesEl.innerHTML = html;
 }
 
 function setDuration(min) {
   if (pomoRunning) return;
   pomoDuration = min;
   pomoSecs = min * 60;
-  document.querySelectorAll('.pomo-preset').forEach(b => b.classList.toggle('active', b.textContent.includes(min)));
+  document.querySelectorAll('.pomo-preset').forEach(b => b.classList.toggle('active', b.textContent.trim().startsWith(String(min))));
   updatePomoDisplay();
   updatePomoBar();
 }
@@ -1410,8 +1364,10 @@ function visibleOutreach() {
   return outreachItems.filter(o => {
     if (o.done) return false;
     if (catFilter && o.cat !== catFilter) return false;
+    // In Today view, only show starred outreach
     if (star && !o.starred) return false;
-    if (pri && parseInt(o.pri||'2') >= 2) return false;
+    // In Prioritized view, only show high/top priority outreach
+    if (pri && !star && parseInt(o.pri||'2') >= 2) return false;
     return true;
   });
 }
