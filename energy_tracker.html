@@ -464,6 +464,13 @@
     </div>
   </div>
 
+  <!-- Search -->
+  <div style="margin-bottom:8px;position:relative">
+    <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none" aria-hidden="true"></i>
+    <input type="text" id="search-input" placeholder="Search tasks…" oninput="onSearch()"
+      style="width:100%;padding:8px 10px 8px 32px;border-radius:var(--radius-lg);border:0.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px" />
+  </div>
+
   <!-- Filters -->
   <div class="filters" id="filters">
     <span class="pill active" data-pill="all" onclick="togglePill('all')">All</span>
@@ -505,6 +512,7 @@ let catFilter   = null;   // set when stat box clicked
 let expandedId  = null;
 let scriptUrl   = localStorage.getItem('scriptUrl') || '';
 let addStarred  = false;
+let searchQuery = '';
 
 // ── Theme ─────────────────────────────────────────────────
 function initTheme() {
@@ -678,7 +686,10 @@ async function addItem() {
   items.unshift(item);
   document.getElementById('f-name').value = '';
   addStarred = false;
-  toggleAddStar();
+  const btn = document.getElementById('add-star-btn');
+  btn.style.color       = 'var(--text3)';
+  btn.style.borderColor = 'var(--border2)';
+  btn.style.background  = 'none';
   render();
   await apiPost({ action: 'add', item });
 }
@@ -769,6 +780,11 @@ async function saveEdit(id) {
 }
 
 // ── Filters ───────────────────────────────────────────────
+function onSearch() {
+  searchQuery = document.getElementById('search-input').value.trim().toLowerCase();
+  render();
+}
+
 function togglePill(pill) {
   catFilter = null;
   if (pill === 'all') {
@@ -808,6 +824,7 @@ function updateFilterUI() {
 function visible() {
   return items.filter(i => {
     if (offClock && i.tag === 'work') return false;
+    if (searchQuery && !i.name.toLowerCase().includes(searchQuery)) return false;
     if (catFilter) return i.cat === catFilter;
     const all  = activePills.has('all');
     const work = activePills.has('work');
