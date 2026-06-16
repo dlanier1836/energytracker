@@ -1010,7 +1010,6 @@ function itemHTML(i) {
         <div class="item-name ${i.cleared ? 'cleared' : ''}">${i.name}</div>
         <div class="item-meta">
           <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}" style="text-transform:none;letter-spacing:0">${i.tag === 'work' ? 'Work' : 'Personal'}</span>
-          ${priBadge}
           ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
         </div>
         ${i.note ? `<div class="item-note">${i.note}</div>` : ''}
