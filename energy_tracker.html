@@ -912,7 +912,8 @@ function render() {
   const ovis = visibleOutreach();
   let ohtml = '';
   if (ovis.length && (activePills.has('starred') || activePills.has('prioritized'))) {
-    ohtml = ovis.map(outreachItemHTML).join('');
+    ohtml = '<div class="section-hdr"><i class="ti ti-phone" style="font-size:11px" aria-hidden="true"></i> Outreach</div>';
+    ohtml += ovis.map(outreachItemHTML).join('');
   }
   const combined = html + ohtml;
   listEl.innerHTML = combined || '<div class="empty">Nothing here</div>';
@@ -1163,6 +1164,7 @@ async function loadOutreach() {
     outreachItems = arr.map(normalizeOutreach).filter(o => !o.archived);
     localStorage.setItem('outreachCache', JSON.stringify(outreachItems));
     renderOutreach();
+    render(); // ensure Today view picks up starred outreach on load
   } catch(e) {
     const cached = localStorage.getItem('outreachCache');
     if (cached) { outreachItems = JSON.parse(cached); renderOutreach(); }
@@ -1300,10 +1302,15 @@ function editOutreachName(id, e) {
 function renderOutreach() {
   const active = outreachItems.filter(o => !o.done);
   const done   = outreachItems.filter(o => o.done);
-  const vis    = outreachTypeFilter === 'all' ? outreachItems
-               : outreachItems.filter(o => o.type === outreachTypeFilter);
+  // In Today view, only show starred outreach in the panel
+  const todayActive = activePills.has('starred');
+  const vis = outreachItems.filter(o => {
+    if (todayActive && !o.done && !o.starred) return false;
+    if (outreachTypeFilter !== 'all' && o.type !== outreachTypeFilter) return false;
+    return true;
+  });
 
-  // Count badge
+  // Count badge — always show full active count, not filtered
   const activeCount = active.filter(o => outreachTypeFilter === 'all' || o.type === outreachTypeFilter).length;
   document.getElementById('outreach-count').textContent = activeCount + ' remaining';
 
