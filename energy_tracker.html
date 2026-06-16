@@ -1015,8 +1015,9 @@ function itemHTML(i) {
         </div>
         ${i.note ? `<div class="item-note">${i.note}</div>` : ''}
       </div>
-      ${priBtns}
+      ${priBadge}
       ${starBtn}
+      ${priBtns}
       <button class="del-btn" onclick="del(${i.id}, event)" aria-label="Remove"><i class="ti ti-trash"></i></button>
     </div>
     ${editPanel}
@@ -1454,13 +1455,13 @@ function renderOutreach() {
         <span class="outreach-name ${o.done ? 'done' : ''}" id="oname-${o.id}" onclick="editOutreachName(${o.id}, event)" title="Tap to edit">${o.name}</span>
         ${o.lastPinged ? `<span class="ping-ago" onclick="setPingDate(${o.id}, event)" title="Tap to change date" style="display:block;margin-top:1px">${formatPingAgo(o.lastPinged)}</span>` : ''}
       </div>
-      ${priBadge}
       <button class="ping-btn" onclick="pingOutreach(${o.id}, event)" title="Log a ping">ping</button>
+      ${priBadge}
+      <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
       <div class="outreach-pri-btns">
         <button class="outreach-pri-btn ${upActive}"   onclick="changeOutreachPri(${o.id},'up',event)">▲</button>
         <button class="outreach-pri-btn ${downActive}" onclick="changeOutreachPri(${o.id},'down',event)">▼</button>
       </div>
-      <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
       <button class="outreach-del" onclick="deleteOutreach(${o.id}, event)" aria-label="Remove"><i class="ti ti-x"></i></button>
     </div>`;
   }).join('');
