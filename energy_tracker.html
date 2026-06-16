@@ -1448,8 +1448,7 @@ function toggleErrands() {
 async function addErrands() {
   const raw = document.getElementById('e-name').value.trim();
   if (!raw) return;
-  const names = raw.split(/[,
-]+/).map(s => s.trim()).filter(Boolean);
+  const names = raw.split(/[,\u000a]+/).map(s => s.trim()).filter(Boolean);
   for (const name of names) {
     const item = { id: Math.floor(Date.now() + Math.random()*1000), name, pri:'2', starred:false, done:false, archived:false, added: new Date().toISOString().slice(0,10) };
     errandsItems.unshift(item);
