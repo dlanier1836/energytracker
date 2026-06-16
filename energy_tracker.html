@@ -142,6 +142,52 @@
   .dot-drai { background: #C47D24; }
   .empty { color: var(--text3); text-align: center; padding: 2rem; font-size: 14px; }
 
+
+  /* ── Outreach panel ──────────────────────────────────────────── */
+  .outreach-panel { background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border); margin-bottom: 1.25rem; overflow: hidden; }
+  .outreach-hdr { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--bg2); border-bottom: 0.5px solid var(--border); cursor: pointer; user-select: none; }
+  .outreach-hdr-title { font-size: 13px; font-weight: 500; flex: 1; display: flex; align-items: center; gap: 8px; }
+  .outreach-count { font-size: 11px; border: 0.5px solid var(--border); border-radius: 20px; padding: 1px 8px; color: var(--text2); }
+  .outreach-type-toggle { display: flex; border: 0.5px solid var(--border2); border-radius: 20px; overflow: hidden; font-size: 11px; }
+  .outreach-type-btn { padding: 3px 10px; cursor: pointer; color: var(--text2); background: none; border: none; }
+  .outreach-type-btn.active { background: var(--text); color: var(--bg); }
+  .outreach-chevron { font-size: 16px; color: var(--text2); transition: transform .2s; }
+  .outreach-panel.collapsed .outreach-chevron { transform: rotate(-90deg); }
+  .outreach-panel.collapsed .outreach-body { display: none; }
+  .outreach-body {}
+  .outreach-add { display: flex; gap: 6px; padding: 10px 14px; border-bottom: 0.5px solid var(--border); }
+  .outreach-add input { flex: 1; padding: 6px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); font-size: 13px; }
+  .outreach-add select { padding: 5px 8px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); font-size: 12px; }
+  .outreach-add button { padding: 6px 14px; border-radius: var(--radius); border: none; background: var(--text); color: var(--bg); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .outreach-list { padding: 6px 10px; display: flex; flex-direction: column; gap: 3px; }
+  .outreach-row { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: var(--radius); }
+  .outreach-row:hover { background: var(--bg2); }
+  .outreach-chk { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; flex-shrink: 0; }
+  .outreach-chk.done { background: var(--text2); border-color: var(--text2); color: var(--bg); }
+  /* energy dot — tappable cycling color */
+  .e-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; cursor: pointer; border: 1.5px solid var(--border2); transition: background .15s; }
+  .e-dot.e1 { background: #D94848; border-color: #D94848; }
+  .e-dot.e2 { background: #3A9E6C; border-color: #3A9E6C; }
+  .e-dot.e3 { background: #9b9b96; border-color: #9b9b96; }
+  .e-dot.e4 { background: #C47D24; border-color: #C47D24; }
+  .outreach-icon { font-size: 13px; color: var(--text2); flex-shrink: 0; }
+  .outreach-name { font-size: 13px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .outreach-name.done { text-decoration: line-through; color: var(--text3); }
+  .outreach-pri-badge { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
+  .outreach-star { background: none; border: none; cursor: pointer; font-size: 15px; color: var(--border2); padding: 0 2px; flex-shrink: 0; line-height: 1; }
+  .outreach-star.on { color: #f59e0b; }
+  .outreach-pri-btns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+  .outreach-pri-btn { background: none; border: none; font-size: 9px; cursor: pointer; color: var(--text3); padding: 1px 3px; border-radius: 3px; line-height: 1; }
+  .outreach-pri-btn:hover { color: var(--text); background: var(--bg2); }
+  .outreach-pri-btn.active { color: var(--text); }
+  .outreach-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 14px; padding: 2px; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; }
+  .outreach-del:hover { color: #D94848; background: #FDE8E8; }
+  .outreach-footer { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 10px; border-top: 0.5px solid var(--border); }
+  .outreach-done-count { font-size: 12px; color: var(--text2); }
+  .outreach-archive-btn { font-size: 11px; color: var(--text3); background: none; border: 0.5px solid var(--border); padding: 3px 10px; border-radius: 20px; cursor: pointer; }
+  .outreach-archive-btn:hover { color: #7A4D10; border-color: #C47D24; background: #FEF3E2; }
+  .outreach-empty { font-size: 13px; color: var(--text3); text-align: center; padding: 1rem; }
+
   /* Items */
   .item { background: var(--bg); border-radius: var(--radius-lg); margin-bottom: 6px; border: 0.5px solid var(--border); overflow: hidden; display: flex; flex-direction: column; position: relative; }
   .item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: var(--radius-lg) 0 0 var(--radius-lg); }
@@ -324,6 +370,39 @@
     </div>
   </div>
 
+
+  <!-- Outreach panel -->
+  <div class="outreach-panel" id="outreach-panel">
+    <div class="outreach-hdr" onclick="toggleOutreach()">
+      <div class="outreach-hdr-title">
+        <i class="ti ti-phone" aria-hidden="true"></i>
+        Outreach
+        <span class="outreach-count" id="outreach-count">0 remaining</span>
+      </div>
+      <div class="outreach-type-toggle" onclick="event.stopPropagation()">
+        <button class="outreach-type-btn active" id="otype-all"  onclick="setOutreachType('all')">All</button>
+        <button class="outreach-type-btn"        id="otype-call" onclick="setOutreachType('call')">Calls</button>
+        <button class="outreach-type-btn"        id="otype-email" onclick="setOutreachType('email')">Emails</button>
+      </div>
+      <i class="ti ti-chevron-down outreach-chevron" aria-hidden="true"></i>
+    </div>
+    <div class="outreach-body">
+      <div class="outreach-add">
+        <input type="text" id="o-name" placeholder="Add names, comma-separated…" />
+        <select id="o-type">
+          <option value="call">Call</option>
+          <option value="email">Email</option>
+        </select>
+        <button onclick="addOutreach()">Add</button>
+      </div>
+      <div class="outreach-list" id="outreach-list"></div>
+      <div class="outreach-footer">
+        <span class="outreach-done-count" id="outreach-done-count"></span>
+        <button class="outreach-archive-btn" id="outreach-archive-btn" onclick="archiveOutreach()" style="display:none">Archive done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Filters -->
   <div class="filters" id="filters">
     <span class="pill active" data-pill="all" onclick="togglePill('all')">All</span>
@@ -421,6 +500,7 @@ function saveScriptUrl() {
   scriptUrl = url;
   document.getElementById('setup-banner').style.display = 'none';
   loadItems();
+loadOutreach();
 }
 
 // ── Data helpers ──────────────────────────────────────────
@@ -710,7 +790,21 @@ function render() {
       });
     }
   }
-  listEl.innerHTML = html;
+  // Inject outreach items into Today / Prioritized views
+  const ovis = visibleOutreach();
+  if (ovis.length) {
+    let ohtml = '';
+    if (activePills.has('starred') || activePills.has('prioritized')) {
+      ohtml = ovis.map(outreachItemHTML).join('');
+    }
+    if (!vis.length) {
+      listEl.innerHTML = ohtml || '<div class="empty">Nothing here</div>';
+    } else {
+      listEl.innerHTML = html + ohtml;
+    }
+  } else {
+    listEl.innerHTML = html;
+  }
 }
 
 function itemHTML(i) {
@@ -936,8 +1030,242 @@ function updatePomoBar() {
   else               bar.style.background = '#D94848';
 }
 
+
+// ── Outreach ──────────────────────────────────────────────
+let outreachItems = [];
+let outreachTypeFilter = 'all';
+let outreachCollapsed = false;
+
+// Energy cycling: 0=neutral(gray) 1=risk(red) 2=energizing(green) 3=draining(amber)
+// stored as cat string matching item cats: '3'=neutral,'1'=risk,'2'=enrg,'4'=drain
+const O_CAT_CYCLE = ['3','1','2','4'];
+const O_CAT_DOT   = { '1':'e1','2':'e2','3':'e3','4':'e4' };
+const O_CAT_ACC   = { '1':'acc-risk','2':'acc-enrg','3':'acc-neut','4':'acc-drai' };
+const O_PRI_BADGE = { '0':{ badge:'!!', cls:'pri-top' }, '1':{ badge:'!', cls:'pri-high' }, '2':{ badge:'', cls:'' }, '3':{ badge:'↓', cls:'pri-low' } };
+
+function normalizeOutreach(r) {
+  return {
+    id:       Number(r.id),
+    name:     r.name || '',
+    type:     r.type || 'call',
+    cat:      String(r.cat || '3'),
+    pri:      String(r.pri != null && r.pri !== '' ? r.pri : '2'),
+    starred:  r.starred === true || String(r.starred).toUpperCase() === 'TRUE',
+    done:     r.done === true || String(r.done).toUpperCase() === 'TRUE',
+    archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
+    added:    (r.added || '').slice(0,10),
+  };
+}
+
+async function loadOutreach() {
+  if (!scriptUrl) return;
+  try {
+    const res = await fetch(scriptUrl + '?action=getOutreach');
+    if (!res.ok) return;
+    const data = await res.json();
+    const arr = Array.isArray(data) ? data : (data.items || []);
+    outreachItems = arr.map(normalizeOutreach).filter(o => !o.archived);
+    localStorage.setItem('outreachCache', JSON.stringify(outreachItems));
+    renderOutreach();
+  } catch(e) {
+    const cached = localStorage.getItem('outreachCache');
+    if (cached) { outreachItems = JSON.parse(cached); renderOutreach(); }
+  }
+}
+
+async function outreachPost(payload) {
+  try {
+    await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
+    localStorage.setItem('outreachCache', JSON.stringify(outreachItems));
+  } catch(e) {
+    localStorage.setItem('outreachCache', JSON.stringify(outreachItems));
+  }
+}
+
+function toggleOutreach() {
+  outreachCollapsed = !outreachCollapsed;
+  document.getElementById('outreach-panel').classList.toggle('collapsed', outreachCollapsed);
+}
+
+function setOutreachType(t) {
+  outreachTypeFilter = t;
+  document.querySelectorAll('.outreach-type-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('otype-' + t).classList.add('active');
+  renderOutreach();
+}
+
+async function addOutreach() {
+  const raw = document.getElementById('o-name').value.trim();
+  if (!raw) return;
+  const type = document.getElementById('o-type').value;
+  const names = raw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+  for (const name of names) {
+    const item = { id: Date.now() + Math.random(), name, type, cat:'3', pri:'2', starred:false, done:false, archived:false, added: new Date().toISOString().slice(0,10) };
+    item.id = Math.floor(item.id);
+    outreachItems.unshift(item);
+    await outreachPost({ action: 'addOutreach', item });
+  }
+  document.getElementById('o-name').value = '';
+  renderOutreach();
+}
+
+async function toggleOutreachDone(id, e) {
+  e.stopPropagation();
+  const o = outreachItems.find(x => x.id === id);
+  if (!o) return;
+  o.done = !o.done;
+  renderOutreach();
+  await outreachPost({ action: 'updateOutreach', item: o });
+}
+
+async function cycleOutreachCat(id, e) {
+  e.stopPropagation();
+  const o = outreachItems.find(x => x.id === id);
+  if (!o) return;
+  const idx = O_CAT_CYCLE.indexOf(o.cat);
+  o.cat = O_CAT_CYCLE[(idx + 1) % O_CAT_CYCLE.length];
+  renderOutreach();
+  await outreachPost({ action: 'updateOutreach', item: o });
+}
+
+async function toggleOutreachStar(id, e) {
+  e.stopPropagation();
+  const o = outreachItems.find(x => x.id === id);
+  if (!o) return;
+  o.starred = !o.starred;
+  renderOutreach();
+  await outreachPost({ action: 'updateOutreach', item: o });
+}
+
+async function changeOutreachPri(id, dir, e) {
+  e.stopPropagation();
+  const o = outreachItems.find(x => x.id === id);
+  if (!o) return;
+  const cur = parseInt(o.pri || '2');
+  o.pri = dir === 'up' ? String(Math.max(0, cur-1)) : String(Math.min(3, cur+1));
+  renderOutreach();
+  await outreachPost({ action: 'updateOutreach', item: o });
+}
+
+async function deleteOutreach(id, e) {
+  e.stopPropagation();
+  outreachItems = outreachItems.filter(x => x.id !== id);
+  renderOutreach();
+  await outreachPost({ action: 'deleteOutreach', id });
+}
+
+async function archiveOutreach() {
+  const toArchive = outreachItems.filter(o => o.done);
+  toArchive.forEach(o => { o.archived = true; });
+  outreachItems = outreachItems.filter(o => !o.done);
+  renderOutreach();
+  for (const o of toArchive) {
+    await outreachPost({ action: 'updateOutreach', item: o });
+  }
+}
+
+function renderOutreach() {
+  const active = outreachItems.filter(o => !o.done);
+  const done   = outreachItems.filter(o => o.done);
+  const vis    = outreachTypeFilter === 'all' ? outreachItems
+               : outreachItems.filter(o => o.type === outreachTypeFilter);
+
+  // Count badge
+  const activeCount = active.filter(o => outreachTypeFilter === 'all' || o.type === outreachTypeFilter).length;
+  document.getElementById('outreach-count').textContent = activeCount + ' remaining';
+
+  // Done footer
+  const doneCount = done.filter(o => outreachTypeFilter === 'all' || o.type === outreachTypeFilter).length;
+  document.getElementById('outreach-done-count').textContent = doneCount > 0 ? doneCount + ' done today' : '';
+  document.getElementById('outreach-archive-btn').style.display = done.length > 0 ? 'inline-block' : 'none';
+
+  // Sort: starred first, then by pri, then active before done
+  const sorted = [...vis].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    if (a.starred !== b.starred) return a.starred ? -1 : 1;
+    return parseInt(a.pri||'2') - parseInt(b.pri||'2');
+  });
+
+  if (!sorted.length) {
+    document.getElementById('outreach-list').innerHTML = '<div class="outreach-empty">No outreach yet — add names above</div>';
+    return;
+  }
+
+  document.getElementById('outreach-list').innerHTML = sorted.map(o => {
+    const pri = o.pri || '2';
+    const pb  = O_PRI_BADGE[pri];
+    const priBadge = pb && pb.badge ? `<span class="outreach-pri-badge ${pb.cls}">${pb.badge}</span>` : '';
+    const upActive   = parseInt(pri) < 2 ? 'active' : '';
+    const downActive = parseInt(pri) > 2 ? 'active' : '';
+    const dotCls = O_CAT_DOT[o.cat] || 'e3';
+    const typeIcon = o.type === 'email' ? 'ti-mail' : 'ti-phone';
+    return `<div class="outreach-row">
+      <div class="outreach-chk ${o.done ? 'done' : ''}" onclick="toggleOutreachDone(${o.id}, event)">
+        ${o.done ? '<i class="ti ti-check"></i>' : ''}
+      </div>
+      <div class="e-dot ${dotCls}" onclick="cycleOutreachCat(${o.id}, event)" title="Tap to set energy type"></div>
+      <i class="ti ${typeIcon} outreach-icon" aria-hidden="true"></i>
+      <span class="outreach-name ${o.done ? 'done' : ''}">${o.name}</span>
+      ${priBadge}
+      <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
+      <div class="outreach-pri-btns">
+        <button class="outreach-pri-btn ${upActive}"   onclick="changeOutreachPri(${o.id},'up',event)">▲</button>
+        <button class="outreach-pri-btn ${downActive}" onclick="changeOutreachPri(${o.id},'down',event)">▼</button>
+      </div>
+      <button class="outreach-del" onclick="deleteOutreach(${o.id}, event)" aria-label="Remove"><i class="ti ti-x"></i></button>
+    </div>`;
+  }).join('');
+
+  // Also re-render task list so Today filter picks up outreach stars
+  // (only if we're in starred/prioritized view)
+  if (activePills.has('starred') || activePills.has('prioritized')) render();
+}
+
+// Return outreach items visible in current task filter (for Today / Prioritized views)
+function visibleOutreach() {
+  const star = activePills.has('starred');
+  const pri  = activePills.has('prioritized');
+  if (!star && !pri && !catFilter) return [];
+  return outreachItems.filter(o => {
+    if (o.done) return false;
+    if (catFilter && o.cat !== catFilter) return false;
+    if (star && !o.starred) return false;
+    if (pri && parseInt(o.pri||'2') >= 2) return false;
+    return true;
+  });
+}
+
+function outreachItemHTML(o) {
+  const pri = o.pri || '2';
+  const pb  = O_PRI_BADGE[pri];
+  const priBadge = pb && pb.badge ? `<span class="pri-badge ${pb.cls}">${pb.badge}</span>` : '';
+  const dotCls = O_CAT_DOT[o.cat] || 'e3';
+  const accCls = O_CAT_ACC[o.cat] || 'acc-neut';
+  const typeIcon = o.type === 'email' ? 'ti-mail' : 'ti-phone';
+  return `<div class="item ${accCls} ${o.starred ? 'starred-item' : ''}">
+    <div class="item-row" style="cursor:default">
+      <div class="outreach-chk ${o.done ? 'done' : ''}" onclick="toggleOutreachDone(${o.id}, event)">
+        ${o.done ? '<i class="ti ti-check"></i>' : ''}
+      </div>
+      <div class="item-body">
+        <div class="item-name" style="display:flex;align-items:center;gap:6px">
+          <i class="ti ${typeIcon}" style="font-size:13px;color:var(--text2)" aria-hidden="true"></i>
+          ${o.name}
+        </div>
+        <div class="item-meta">
+          <span class="badge bwork" style="text-transform:none;letter-spacing:0">Contact</span>
+          ${priBadge}
+        </div>
+      </div>
+      <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today" style="font-size:18px;padding:2px 4px;background:none;border:none;cursor:pointer;color:${o.starred ? '#f59e0b' : 'var(--border2)'}">★</button>
+    </div>
+  </div>`;
+}
+
+
 // ── Init ──────────────────────────────────────────────────
 document.getElementById('f-name').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
+document.getElementById('o-name').addEventListener('keydown', e => { if (e.key === 'Enter') addOutreach(); });
 updateFocusDisplay();
 // re-render focus bar after layout settles so widths are correct
 setTimeout(updateFocusDisplay, 100);
