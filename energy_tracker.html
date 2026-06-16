@@ -1281,19 +1281,22 @@ async function pingOutreach(id, e) {
   // Replace the ping button with an inline date input
   const btn = e.target.closest('.ping-btn');
   if (!btn) return;
-  const today = new Date().toISOString().slice(0,10);
+  const now = new Date();
+  const localNow = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  const localToday = localNow.slice(0,10);
   const input = document.createElement('input');
-  input.type = 'date';
+  input.type = 'datetime-local';
   input.className = 'ping-date-input';
-  input.value = today;
-  input.max = today;
+  input.style.width = '160px';
+  input.value = localNow;
+  input.max = localNow;
   btn.replaceWith(input);
   input.focus();
 
   async function confirmPing() {
     const val = input.value;
     if (val) {
-      o.lastPinged = new Date(val + 'T12:00:00').toISOString();
+      o.lastPinged = new Date(val).toISOString();
       await outreachPost({ action: 'updateOutreach', item: o });
     }
     renderOutreach();
@@ -1314,20 +1317,24 @@ async function setPingDate(id, e) {
   if (!o) return;
   const span = e.target.closest('.ping-ago');
   if (!span) return;
-  const today = new Date().toISOString().slice(0,10);
-  const current = o.lastPinged ? o.lastPinged.slice(0,10) : today;
+  const now2 = new Date();
+  const localNow2 = new Date(now2.getTime() - now2.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  const current = o.lastPinged
+    ? new Date(new Date(o.lastPinged).getTime() - now2.getTimezoneOffset()*60000).toISOString().slice(0,16)
+    : localNow2;
   const input = document.createElement('input');
-  input.type = 'date';
+  input.type = 'datetime-local';
   input.className = 'ping-date-input';
+  input.style.width = '160px';
   input.value = current;
-  input.max = today;
+  input.max = localNow2;
   span.replaceWith(input);
   input.focus();
 
   async function confirmPing() {
     const val = input.value;
     if (val) {
-      o.lastPinged = new Date(val + 'T12:00:00').toISOString();
+      o.lastPinged = new Date(val).toISOString();
       await outreachPost({ action: 'updateOutreach', item: o });
     }
     renderOutreach();
