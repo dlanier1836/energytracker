@@ -61,6 +61,9 @@
   .h1-right { margin-left: auto; }
   .theme-btn { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 20px; padding: 2px 4px; border-radius: 6px; display: flex; align-items: center; }
   .theme-btn:hover { color: var(--text); background: var(--bg2); }
+  .clock-btn { background: none; border: none; cursor: pointer; font-size: 18px; padding: 2px 6px; border-radius: 6px; display: flex; align-items: center; transition: background .15s; }
+  .clock-btn:hover { background: var(--bg2); }
+  .clock-btn.off-clock { background: #E0F5EC; border-radius: 6px; }
 
   /* Setup banner */
   .setup-banner { background: #E6F1FB; border: 0.5px solid #B5D4F4; border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.25rem; font-size: 13px; color: #0C447C; line-height: 1.6; }
@@ -272,6 +275,44 @@
   .star-toggle-btn:hover { border-color: #f59e0b; color: #b45309; }
   .star-toggle-btn.starred-on { background: #f59e0b; border-color: #f59e0b; color: #fff; }
 
+  /* Errands panel — mirrors outreach but simpler */
+  .errands-panel { background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border); margin-bottom: 1.25rem; overflow: hidden; }
+  .errands-hdr { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--bg2); border-bottom: 0.5px solid var(--border); cursor: pointer; user-select: none; }
+  .errands-hdr-title { font-size: 13px; font-weight: 500; flex: 1; display: flex; align-items: center; gap: 8px; }
+  .errands-count { font-size: 11px; border: 0.5px solid var(--border); border-radius: 20px; padding: 1px 8px; color: var(--text2); }
+  .errands-chevron { font-size: 16px; color: var(--text2); transition: transform .2s; }
+  .errands-panel.collapsed .errands-chevron { transform: rotate(-90deg); }
+  .errands-panel.collapsed .errands-body { display: none; }
+  .errands-add { display: flex; gap: 6px; padding: 10px 14px; border-bottom: 0.5px solid var(--border); }
+  .errands-add input { flex: 1; padding: 6px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); font-size: 13px; }
+  .errands-add button { padding: 6px 14px; border-radius: var(--radius); border: none; background: var(--text); color: var(--bg); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .errands-list { padding: 6px 10px; display: flex; flex-direction: column; gap: 3px; }
+  .errands-row { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border-radius: var(--radius); }
+  .errands-row:hover { background: var(--bg2); }
+  .errands-chk { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; flex-shrink: 0; }
+  .errands-chk.done { background: var(--text2); border-color: var(--text2); color: var(--bg); }
+  .errands-name { font-size: 13px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text; }
+  .errands-name.done { text-decoration: line-through; color: var(--text3); }
+  .errands-name-input { font-size: 13px; flex: 1; min-width: 0; padding: 2px 6px; border-radius: 4px; border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); }
+  .errands-star { background: none; border: none; cursor: pointer; font-size: 15px; color: var(--border2); padding: 0 2px; flex-shrink: 0; line-height: 1; }
+  .errands-star.on { color: #f59e0b; }
+  .errands-pri-btns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
+  .errands-pri-btn { background: none; border: none; font-size: 9px; cursor: pointer; color: var(--text3); padding: 1px 3px; border-radius: 3px; line-height: 1; }
+  .errands-pri-btn:hover { color: var(--text); background: var(--bg2); }
+  .errands-pri-btn.active { color: var(--text); }
+  .errands-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 14px; padding: 2px; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; }
+  .errands-del:hover { color: #D94848; background: #FDE8E8; }
+  .errands-footer { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 10px; border-top: 0.5px solid var(--border); }
+  .errands-done-count { font-size: 12px; color: var(--text2); }
+  .errands-archive-btn { font-size: 11px; color: var(--text3); background: none; border: 0.5px solid var(--border); padding: 3px 10px; border-radius: 20px; cursor: pointer; }
+  .errands-archive-btn:hover { color: #7A4D10; border-color: #C47D24; background: #FEF3E2; }
+  .errands-empty { font-size: 13px; color: var(--text3); text-align: center; padding: 1rem; }
+  @media (max-width: 500px) {
+    .errands-add { flex-wrap: wrap; }
+    .errands-add input { flex: 1 1 100%; }
+    .errands-add button { flex: 1; }
+  }
+
   /* Sync status */
   .sync-status { font-size: 12px; color: var(--text3); margin-bottom: .75rem; min-height: 1.2em; }
   .sync-ok  { color: #3A9E6C; }
@@ -296,7 +337,10 @@
 
   <h1>
     <i class="ti ti-bolt" style="color:#C47D24"></i> Energy tracker
-    <span class="h1-right">
+    <span class="h1-right" style="display:flex;align-items:center;gap:4px">
+      <button class="clock-btn" onclick="toggleClock()" id="clock-btn" title="Toggle on/off the clock">
+        <i id="clock-icon" class="ti ti-building" aria-hidden="true"></i>
+      </button>
       <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle dark/light mode">
         <i class="ti ti-sun" id="theme-icon"></i>
       </button>
@@ -360,7 +404,7 @@
         <option value="1">Risk / threat / distraction</option>
         <option value="2">Giving energy — want to do</option>
         <option value="3">Neutral / normal</option>
-        <option value="4">Taking energy — watch it</option>
+        <option value="4">Draining — but eat that frog</option>
       </select>
       <select id="f-tag">
         <option value="work">Work</option>
@@ -411,6 +455,29 @@
     </div>
   </div>
 
+  <!-- Errands panel (off the clock mode) -->
+  <div class="errands-panel" id="errands-panel" style="display:none">
+    <div class="errands-hdr" onclick="toggleErrands()">
+      <div class="errands-hdr-title">
+        <i class='ti ti-shopping-cart' style='font-size:15px' aria-hidden='true'></i>
+        Errands
+        <span class="errands-count" id="errands-count">0 remaining</span>
+      </div>
+      <i class="ti ti-chevron-down errands-chevron" aria-hidden="true"></i>
+    </div>
+    <div class="errands-body">
+      <div class="errands-add">
+        <input type="text" id="e-name" placeholder="Add errands, comma-separated…" />
+        <button onclick="addErrands()">Add</button>
+      </div>
+      <div class="errands-list" id="errands-list"></div>
+      <div class="errands-footer">
+        <span class="errands-done-count" id="errands-done-count"></span>
+        <button class="errands-archive-btn" id="errands-archive-btn" onclick="archiveErrands()" style="display:none">Archive done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Filters -->
   <div class="filters" id="filters">
     <span class="pill active" data-pill="all" onclick="togglePill('all')">All</span>
@@ -432,7 +499,7 @@ const CATS = {
   '1': { label: 'Risk / threat / distraction', short: 'Risk',       cls: 'brisk', acc: 'acc-risk', dot: 'dot-risk', statCls: 's-risk' },
   '2': { label: 'Giving energy — want to do',  short: 'Energizing', cls: 'benrg', acc: 'acc-enrg', dot: 'dot-enrg', statCls: 's-enrg' },
   '3': { label: 'Neutral / normal',            short: 'Neutral',    cls: 'bneut', acc: 'acc-neut', dot: 'dot-neut', statCls: 's-neut' },
-  '4': { label: 'Taking energy — watch it',    short: 'Draining',   cls: 'bdrai', acc: 'acc-drai', dot: 'dot-drai', statCls: 's-drai' },
+  '4': { label: 'Draining — but eat that frog', short: 'Draining',   cls: 'bdrai', acc: 'acc-drai', dot: 'dot-drai', statCls: 's-drai' },
 };
 const CAT_ORDER = ['1','2','3','4'];
 
@@ -445,6 +512,7 @@ const PRI = {
 };
 
 // ── State ─────────────────────────────────────────────────
+let offClock = localStorage.getItem('offClock') === 'true';
 let items = [];
 let activePills = new Set(['all']);
 let catFilter   = null;   // set when stat box clicked
@@ -499,6 +567,27 @@ function updateThemeIcon() {
   document.getElementById('theme-icon').className = isDark ? 'ti ti-sun' : 'ti ti-moon';
 }
 initTheme();
+
+// ── Clock mode ────────────────────────────────────────────
+function toggleClock() {
+  offClock = !offClock;
+  localStorage.setItem('offClock', offClock);
+  applyClockMode();
+}
+function applyClockMode() {
+  const ci = document.getElementById('clock-icon'); ci.className = offClock ? 'ti ti-beach' : 'ti ti-building';
+  document.getElementById('clock-btn').classList.toggle('off-clock', offClock);
+  // Show/hide outreach vs errands panel
+  const outreachPanel = document.getElementById('outreach-panel');
+  const errandsPanel  = document.getElementById('errands-panel');
+  if (outreachPanel) outreachPanel.style.display = offClock ? 'none' : 'block';
+  if (errandsPanel)  errandsPanel.style.display  = offClock ? 'block' : 'none';
+  // Re-render tasks (filters out work items in off-clock mode)
+  render();
+  if (offClock) renderErrands();
+  else renderOutreach();
+}
+applyClockMode();
 
 // ── Script URL ────────────────────────────────────────────
 function saveScriptUrl() {
@@ -721,6 +810,7 @@ function updateFilterUI() {
 
 function visible() {
   return items.filter(i => {
+    if (offClock && i.tag === 'work') return false;
     if (catFilter) return i.cat === catFilter;
     const all  = activePills.has('all');
     const work = activePills.has('work');
@@ -1106,7 +1196,7 @@ async function addOutreach() {
   const raw = document.getElementById('o-name').value.trim();
   if (!raw) return;
   const type = document.getElementById('o-type').value;
-  const names = raw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+  const names = raw.split(/[,\u000a]+/).map(s => s.trim()).filter(Boolean);
   for (const name of names) {
     const item = { id: Date.now() + Math.random(), name, type, cat:'3', pri:'2', starred:false, done:false, archived:false, added: new Date().toISOString().slice(0,10) };
     item.id = Math.floor(item.id);
@@ -1309,14 +1399,186 @@ function outreachItemHTML(o) {
 }
 
 
+// ── Errands ──────────────────────────────────────────────
+let errandsItems = [];
+let errandsCollapsed = false;
+
+function normalizeErrand(r) {
+  return {
+    id:       Number(r.id),
+    name:     r.name || '',
+    pri:      String(r.pri != null && r.pri !== '' ? r.pri : '2'),
+    starred:  r.starred === true || String(r.starred).toUpperCase() === 'TRUE',
+    done:     r.done    === true || String(r.done).toUpperCase()    === 'TRUE',
+    archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
+    added:    (r.added || '').slice(0,10),
+  };
+}
+
+async function loadErrands() {
+  if (!scriptUrl) return;
+  try {
+    const res = await fetch(scriptUrl + '?action=getErrands');
+    if (!res.ok) return;
+    const data = await res.json();
+    const arr = Array.isArray(data) ? data : (data.items || []);
+    errandsItems = arr.map(normalizeErrand).filter(e => !e.archived);
+    localStorage.setItem('errandsCache', JSON.stringify(errandsItems));
+    renderErrands();
+  } catch(err) {
+    const cached = localStorage.getItem('errandsCache');
+    if (cached) { errandsItems = JSON.parse(cached); renderErrands(); }
+  }
+}
+
+async function errandsPost(payload) {
+  try {
+    await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
+    localStorage.setItem('errandsCache', JSON.stringify(errandsItems));
+  } catch(e) {
+    localStorage.setItem('errandsCache', JSON.stringify(errandsItems));
+  }
+}
+
+function toggleErrands() {
+  errandsCollapsed = !errandsCollapsed;
+  document.getElementById('errands-panel').classList.toggle('collapsed', errandsCollapsed);
+}
+
+async function addErrands() {
+  const raw = document.getElementById('e-name').value.trim();
+  if (!raw) return;
+  const names = raw.split(/[,
+]+/).map(s => s.trim()).filter(Boolean);
+  for (const name of names) {
+    const item = { id: Math.floor(Date.now() + Math.random()*1000), name, pri:'2', starred:false, done:false, archived:false, added: new Date().toISOString().slice(0,10) };
+    errandsItems.unshift(item);
+    await errandsPost({ action: 'addErrand', item });
+  }
+  document.getElementById('e-name').value = '';
+  renderErrands();
+}
+
+async function toggleErrandDone(id, e) {
+  e.stopPropagation();
+  const o = errandsItems.find(x => x.id === id);
+  if (!o) return;
+  o.done = !o.done;
+  renderErrands();
+  await errandsPost({ action: 'updateErrand', item: o });
+}
+
+async function toggleErrandStar(id, e) {
+  e.stopPropagation();
+  const o = errandsItems.find(x => x.id === id);
+  if (!o) return;
+  o.starred = !o.starred;
+  renderErrands();
+  await errandsPost({ action: 'updateErrand', item: o });
+}
+
+async function changeErrandPri(id, dir, e) {
+  e.stopPropagation();
+  const o = errandsItems.find(x => x.id === id);
+  if (!o) return;
+  const cur = parseInt(o.pri || '2');
+  o.pri = dir === 'up' ? String(Math.max(0, cur-1)) : String(Math.min(3, cur+1));
+  renderErrands();
+  await errandsPost({ action: 'updateErrand', item: o });
+}
+
+async function deleteErrand(id, e) {
+  e.stopPropagation();
+  errandsItems = errandsItems.filter(x => x.id !== id);
+  renderErrands();
+  await errandsPost({ action: 'deleteErrand', id });
+}
+
+async function archiveErrands() {
+  const toArchive = errandsItems.filter(o => o.done);
+  toArchive.forEach(o => { o.archived = true; });
+  errandsItems = errandsItems.filter(o => !o.done);
+  renderErrands();
+  for (const o of toArchive) await errandsPost({ action: 'updateErrand', item: o });
+}
+
+function editErrandName(id, e) {
+  e.stopPropagation();
+  const o = errandsItems.find(x => x.id === id);
+  if (!o || o.done) return;
+  const span = document.getElementById('ename-' + id);
+  if (!span) return;
+  const input = document.createElement('input');
+  input.className = 'errands-name-input';
+  input.value = o.name;
+  span.replaceWith(input);
+  input.focus(); input.select();
+  async function save() {
+    const val = input.value.trim();
+    if (val) o.name = val;
+    renderErrands();
+    if (val) await errandsPost({ action: 'updateErrand', item: o });
+  }
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+    if (ev.key === 'Escape') { renderErrands(); }
+    ev.stopPropagation();
+  });
+}
+
+function renderErrands() {
+  if (!offClock) return;
+  const active = errandsItems.filter(o => !o.done);
+  const done   = errandsItems.filter(o => o.done);
+
+  document.getElementById('errands-count').textContent = active.length + ' remaining';
+  document.getElementById('errands-done-count').textContent = done.length > 0 ? done.length + ' done today' : '';
+  document.getElementById('errands-archive-btn').style.display = done.length > 0 ? 'inline-block' : 'none';
+
+  const sorted = [...errandsItems].sort((a,b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    if (a.starred !== b.starred) return a.starred ? -1 : 1;
+    return parseInt(a.pri||'2') - parseInt(b.pri||'2');
+  });
+
+  if (!sorted.length) {
+    document.getElementById('errands-list').innerHTML = '<div class="errands-empty">No errands yet — add above</div>';
+    return;
+  }
+
+  document.getElementById('errands-list').innerHTML = sorted.map(o => {
+    const pri = o.pri || '2';
+    const pb  = O_PRI_BADGE[pri];
+    const priBadge = pb && pb.badge ? `<span class="outreach-pri-badge ${pb.cls}">${pb.badge}</span>` : '';
+    const upActive   = parseInt(pri) < 2 ? 'active' : '';
+    const downActive = parseInt(pri) > 2 ? 'active' : '';
+    return `<div class="errands-row">
+      <div class="errands-chk ${o.done ? 'done' : ''}" onclick="toggleErrandDone(${o.id}, event)">
+        ${o.done ? '<i class="ti ti-check"></i>' : ''}
+      </div>
+      <span class="errands-name ${o.done ? 'done' : ''}" id="ename-${o.id}" onclick="editErrandName(${o.id}, event)">${o.name}</span>
+      ${priBadge}
+      <button class="errands-star ${o.starred ? 'on' : ''}" onclick="toggleErrandStar(${o.id}, event)" title="Star for today">★</button>
+      <div class="errands-pri-btns">
+        <button class="errands-pri-btn ${upActive}"   onclick="changeErrandPri(${o.id},'up',event)">▲</button>
+        <button class="errands-pri-btn ${downActive}" onclick="changeErrandPri(${o.id},'down',event)">▼</button>
+      </div>
+      <button class="errands-del" onclick="deleteErrand(${o.id}, event)" aria-label="Remove"><i class="ti ti-x"></i></button>
+    </div>`;
+  }).join('');
+}
+
 // ── Init ──────────────────────────────────────────────────
 document.getElementById('f-name').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
 document.getElementById('o-name').addEventListener('keydown', e => { if (e.key === 'Enter') addOutreach(); });
+document.getElementById('e-name').addEventListener('keydown', e => { if (e.key === 'Enter') addErrands(); });
 updateFocusDisplay();
 // re-render focus bar after layout settles so widths are correct
 setTimeout(updateFocusDisplay, 100);
 loadItems();
 loadOutreach();
+loadErrands();
 </script>
 </body>
 </html>
