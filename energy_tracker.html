@@ -587,7 +587,6 @@ function applyClockMode() {
   if (offClock) renderErrands();
   else renderOutreach();
 }
-applyClockMode();
 
 // ── Script URL ────────────────────────────────────────────
 function saveScriptUrl() {
@@ -1575,6 +1574,7 @@ document.getElementById('e-name').addEventListener('keydown', e => { if (e.key =
 updateFocusDisplay();
 // re-render focus bar after layout settles so widths are correct
 setTimeout(updateFocusDisplay, 100);
+applyClockMode();
 loadItems();
 loadOutreach();
 loadErrands();
