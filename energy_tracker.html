@@ -171,8 +171,9 @@
   .e-dot.e3 { background: #9b9b96; border-color: #9b9b96; }
   .e-dot.e4 { background: #C47D24; border-color: #C47D24; }
   .outreach-icon { font-size: 13px; color: var(--text2); flex-shrink: 0; }
-  .outreach-name { font-size: 13px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .outreach-name { font-size: 13px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text; }
   .outreach-name.done { text-decoration: line-through; color: var(--text3); }
+  .outreach-name-input { font-size: 13px; flex: 1; min-width: 0; padding: 2px 6px; border-radius: 4px; border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); }
   .outreach-pri-badge { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; flex-shrink: 0; }
   .outreach-star { background: none; border: none; cursor: pointer; font-size: 15px; color: var(--border2); padding: 0 2px; flex-shrink: 0; line-height: 1; }
   .outreach-star.on { color: #f59e0b; }
@@ -1177,6 +1178,32 @@ async function archiveOutreach() {
   }
 }
 
+function editOutreachName(id, e) {
+  e.stopPropagation();
+  const o = outreachItems.find(x => x.id === id);
+  if (!o || o.done) return;
+  const span = document.getElementById('oname-' + id);
+  if (!span) return;
+  const input = document.createElement('input');
+  input.className = 'outreach-name-input';
+  input.value = o.name;
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+  async function save() {
+    const val = input.value.trim();
+    if (val) o.name = val;
+    renderOutreach();
+    if (val) await outreachPost({ action: 'updateOutreach', item: o });
+  }
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', function(ev) {
+    if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+    if (ev.key === 'Escape') { o.name = o.name; renderOutreach(); }
+    ev.stopPropagation();
+  });
+}
+
 function renderOutreach() {
   const active = outreachItems.filter(o => !o.done);
   const done   = outreachItems.filter(o => o.done);
@@ -1219,7 +1246,7 @@ function renderOutreach() {
       </div>
       <div class="e-dot ${dotCls}" onclick="cycleOutreachCat(${o.id}, event)" title="Tap to set energy type"></div>
       <i class="ti ${typeIcon} outreach-icon" onclick="cycleOutreachType(${o.id}, event)" style="cursor:pointer" title="Tap to change type (${typeTitle})" aria-hidden="true"></i>
-      <span class="outreach-name ${o.done ? 'done' : ''}">${o.name}</span>
+      <span class="outreach-name ${o.done ? 'done' : ''}" id="oname-${o.id}" onclick="editOutreachName(${o.id}, event)" title="Tap to edit">${o.name}</span>
       ${priBadge}
       <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
       <div class="outreach-pri-btns">
