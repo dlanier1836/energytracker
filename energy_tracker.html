@@ -909,14 +909,7 @@ function render() {
     });
   }
 
-  // Inject outreach — in Today view only show starred outreach
-  const ovis = visibleOutreach();
-  let ohtml = '';
-  if (ovis.length && (activePills.has('starred') || activePills.has('prioritized'))) {
-    ohtml = '<div class="section-hdr"><i class="ti ti-phone" style="font-size:11px" aria-hidden="true"></i> Outreach</div>';
-    ohtml += ovis.map(outreachItemHTML).join('');
-  }
-  const combined = html + ohtml;
+  const combined = html;
   listEl.innerHTML = combined || '<div class="empty">Nothing here</div>';
 }
 
