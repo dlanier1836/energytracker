@@ -339,7 +339,7 @@
     <i class="ti ti-bolt" style="color:#C47D24"></i> Energy tracker
     <span class="h1-right" style="display:flex;align-items:center;gap:4px">
       <button class="clock-btn" onclick="toggleClock()" id="clock-btn" title="Toggle on/off the clock">
-        <i id="clock-icon" class="ti ti-building" aria-hidden="true"></i>
+        <i id="clock-icon" class="ti ti-calendar-week" aria-hidden="true"></i>
       </button>
       <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Toggle dark/light mode">
         <i class="ti ti-sun" id="theme-icon"></i>
@@ -575,7 +575,7 @@ function toggleClock() {
   applyClockMode();
 }
 function applyClockMode() {
-  const ci = document.getElementById('clock-icon'); ci.className = offClock ? 'ti ti-beach' : 'ti ti-building';
+  const ci = document.getElementById('clock-icon'); ci.className = offClock ? 'ti ti-beach' : 'ti ti-calendar-week';
   document.getElementById('clock-btn').classList.toggle('off-clock', offClock);
   // Show/hide outreach vs errands panel
   const outreachPanel = document.getElementById('outreach-panel');
@@ -848,7 +848,7 @@ function sortItems(arr) {
 function render() {
   // Stats
   const counts = { '1':0, '2':0, '3':0, '4':0 };
-  items.filter(i => !i.cleared).forEach(i => { if (counts[i.cat] !== undefined) counts[i.cat]++; });
+  items.filter(i => !i.cleared && (!offClock || i.tag === 'personal')).forEach(i => { if (counts[i.cat] !== undefined) counts[i.cat]++; });
   // Show archive-all button only when cleared items exist
   const archiveBtn = document.getElementById('archive-all-btn');
   if (archiveBtn) archiveBtn.style.display = items.some(i => i.cleared) ? 'inline-block' : 'none';
