@@ -502,7 +502,7 @@ function saveScriptUrl() {
   scriptUrl = url;
   document.getElementById('setup-banner').style.display = 'none';
   loadItems();
-loadOutreach();
+  loadOutreach();
 }
 
 // ── Data helpers ──────────────────────────────────────────
@@ -1284,6 +1284,7 @@ updateFocusDisplay();
 // re-render focus bar after layout settles so widths are correct
 setTimeout(updateFocusDisplay, 100);
 loadItems();
+loadOutreach();
 </script>
 </body>
 </html>
