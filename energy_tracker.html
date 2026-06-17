@@ -90,16 +90,30 @@
   .s-enrg { background: #F0FBF5; border-color: #C3EDD6; }
   .s-neut { background: var(--bg); }
   .s-drai { background: #FFFBF0; border-color: #FAEBD7; }
-  html.dark .s-neut { background: #ffffff !important; border-color: #e0e0da !important; }
-  html.dark .s-neut .stat-num { color: #7A7A75 !important; }
-  html.dark .s-neut .stat-lbl { color: #9b9b96 !important; }
-  html.dark .s-drai { background: #FFFBF0 !important; border-color: #FAEBD7 !important; }
-  html.dark .s-drai .stat-num { color: #C47D24 !important; }
+  html.dark .s-risk { background: var(--bg) !important; border: 1.5px solid #f87171 !important; box-shadow: 0 0 8px #f8717133; }
+  html.dark .s-risk .stat-num { color: #f87171 !important; }
+  html.dark .s-risk .stat-lbl { color: #f87171aa !important; }
+  html.dark .s-enrg { background: var(--bg) !important; border: 1.5px solid #6ee7b7 !important; box-shadow: 0 0 8px #6ee7b733; }
+  html.dark .s-enrg .stat-num { color: #6ee7b7 !important; }
+  html.dark .s-enrg .stat-lbl { color: #6ee7b7aa !important; }
+  html.dark .s-neut { background: var(--bg) !important; border: 1.5px solid #a8a8a3 !important; }
+  html.dark .s-neut .stat-num { color: #a8a8a3 !important; }
+  html.dark .s-neut .stat-lbl { color: #a8a8a388 !important; }
+  html.dark .s-drai { background: var(--bg) !important; border: 1.5px solid #fbbf24 !important; box-shadow: 0 0 8px #fbbf2433; }
+  html.dark .s-drai .stat-num { color: #fbbf24 !important; }
+  html.dark .s-drai .stat-lbl { color: #fbbf24aa !important; }
   @media (prefers-color-scheme: dark) {
-    html:not(.light):not(.dark) .s-neut { background: #ffffff !important; border-color: #e0e0da !important; }
-    html:not(.light):not(.dark) .s-neut .stat-num { color: #7A7A75 !important; }
-    html:not(.light):not(.dark) .s-drai { background: #FFFBF0 !important; border-color: #FAEBD7 !important; }
-    html:not(.light):not(.dark) .s-drai .stat-num { color: #C47D24 !important; }
+    html:not(.light):not(.dark) .s-risk { background: var(--bg) !important; border: 1.5px solid #f87171 !important; box-shadow: 0 0 8px #f8717133; }
+    html:not(.light):not(.dark) .s-risk .stat-num { color: #f87171 !important; }
+    html:not(.light):not(.dark) .s-risk .stat-lbl { color: #f87171aa !important; }
+    html:not(.light):not(.dark) .s-enrg { background: var(--bg) !important; border: 1.5px solid #6ee7b7 !important; box-shadow: 0 0 8px #6ee7b733; }
+    html:not(.light):not(.dark) .s-enrg .stat-num { color: #6ee7b7 !important; }
+    html:not(.light):not(.dark) .s-enrg .stat-lbl { color: #6ee7b7aa !important; }
+    html:not(.light):not(.dark) .s-neut { background: var(--bg) !important; border: 1.5px solid #a8a8a3 !important; }
+    html:not(.light):not(.dark) .s-neut .stat-num { color: #a8a8a3 !important; }
+    html:not(.light):not(.dark) .s-drai { background: var(--bg) !important; border: 1.5px solid #fbbf24 !important; box-shadow: 0 0 8px #fbbf2433; }
+    html:not(.light):not(.dark) .s-drai .stat-num { color: #fbbf24 !important; }
+    html:not(.light):not(.dark) .s-drai .stat-lbl { color: #fbbf24aa !important; }
   }
   .s-risk .stat-num { color: #D94848; }
   .s-enrg .stat-num { color: #3A9E6C; }
@@ -146,6 +160,19 @@
   .pill.active { background: var(--text); color: var(--bg); border-color: var(--text); }
   .pill.starred-pill { border-color: #f59e0b; color: #b45309; }
   .pill.starred-pill.active { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+  /* Dark mode pills — Tron style */
+  html.dark .pill { background: transparent; border-color: #4a4a46; color: #a8a8a3; }
+  html.dark .pill:hover { border-color: #a8a8a3; color: var(--text); }
+  html.dark .pill.active { background: transparent !important; color: var(--text) !important; border: 1.5px solid var(--text) !important; box-shadow: 0 0 6px rgba(240,239,233,0.3); }
+  html.dark .pill.starred-pill { border-color: #f59e0b; color: #f59e0b; }
+  html.dark .pill.starred-pill.active { background: transparent !important; color: #fbbf24 !important; border-color: #fbbf24 !important; box-shadow: 0 0 8px #fbbf2444; }
+  @media (prefers-color-scheme: dark) {
+    html:not(.light):not(.dark) .pill { background: transparent; border-color: #4a4a46; color: #a8a8a3; }
+    html:not(.light):not(.dark) .pill:hover { border-color: #a8a8a3; color: var(--text); }
+    html:not(.light):not(.dark) .pill.active { background: transparent !important; color: var(--text) !important; border: 1.5px solid var(--text) !important; box-shadow: 0 0 6px rgba(240,239,233,0.3); }
+    html:not(.light):not(.dark) .pill.starred-pill { border-color: #f59e0b; color: #f59e0b; }
+    html:not(.light):not(.dark) .pill.starred-pill.active { background: transparent !important; color: #fbbf24 !important; border-color: #fbbf24 !important; box-shadow: 0 0 8px #fbbf2444; }
+  }
 
   /* List */
   .section-hdr { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); padding: 16px 0 6px; display: flex; align-items: center; gap: 6px; }
