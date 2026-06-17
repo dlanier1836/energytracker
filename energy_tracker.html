@@ -210,6 +210,19 @@
   .item-name.cleared { text-decoration: line-through; color: var(--text3); }
   .item-meta { display: flex; align-items: center; gap: 5px; margin-top: 3px; flex-wrap: wrap; }
   .item-note { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  /* Subtasks */
+  .subtask-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+  .subtask-row { display: flex; align-items: center; gap: 6px; }
+  .subtask-chk { width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; flex-shrink: 0; background: var(--bg); }
+  .subtask-chk.done { background: var(--text2); border-color: var(--text2); color: var(--bg); }
+  .subtask-name { font-size: 13px; flex: 1; }
+  .subtask-name.done { text-decoration: line-through; color: var(--text3); }
+  .subtask-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 12px; padding: 2px; border-radius: 3px; }
+  .subtask-del:hover { color: #D94848; }
+  .subtask-add-row { display: flex; gap: 6px; margin-top: 6px; }
+  .subtask-add-row input { flex: 1; padding: 5px 8px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; }
+  .subtask-add-btn { padding: 5px 12px; border-radius: var(--radius); border: none; background: var(--bg3); color: var(--text); font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .subtask-add-btn:hover { background: var(--border); }
   .badge { font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; }
   .brisk { background: #FDE8E8; color: #9B2626; }
   .benrg { background: #E0F5EC; color: #1E6B46; }
@@ -242,6 +255,8 @@
 
   .del-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 4px; border-radius: var(--radius); display: flex; align-items: center; flex-shrink: 0; }
   .del-btn:hover { color: #D94848; background: #FDE8E8; }
+  .cal-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 4px; border-radius: var(--radius); display: flex; align-items: center; flex-shrink: 0; }
+  .cal-btn:hover { color: #185FA5; background: #E6F1FB; }
   /* Archive all button */
   .archive-all-btn { font-size: 12px; color: var(--text3); background: none; border: 0.5px solid var(--border); padding: 5px 12px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
   .archive-all-btn:hover { color: #7A4D10; border-color: #C47D24; background: #FEF3E2; }
@@ -614,8 +629,9 @@ function normalize(r) {
     added:    addedClean,
     pri:      String(r.pri != null && r.pri !== '' ? r.pri : '2'),
     deadline: r.deadline || '',
-    starred:  r.starred === true || String(r.starred).toUpperCase() === 'TRUE',
+    starred:  r.starred  === true || String(r.starred).toUpperCase()  === 'TRUE',
     archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
+    subtasks: (() => { try { return JSON.parse(r.subtasks || '[]'); } catch(e) { return []; } })(),
   };
 }
 
@@ -687,6 +703,7 @@ async function addItem() {
     deadline: '',
     starred:  addStarred,
     archived: false,
+    subtasks: [],
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
@@ -761,7 +778,7 @@ async function toggleStar(id, e) {
 }
 
 function toggleExpand(id, e) {
-  if (e.target.closest('.chk') || e.target.closest('.del-btn') || e.target.closest('.pri-btn') || e.target.closest('.star-btn')) return;
+  if (e.target.closest('.chk') || e.target.closest('.del-btn') || e.target.closest('.pri-btn') || e.target.closest('.star-btn') || e.target.closest('.cal-btn')) return;
   expandedId = (expandedId === id) ? null : id;
   render();
 }
@@ -777,7 +794,6 @@ async function saveEdit(id) {
   item.name    = document.getElementById('edit-name-' + id).value.trim() || item.name;
   item.cat     = document.getElementById('edit-cat-'  + id).value;
   item.tag     = document.getElementById('edit-tag-'  + id).value;
-  item.note    = document.getElementById('edit-note-' + id).value.trim();
   // pri already updated in-place via selectPri
   expandedId = null;
   render();
@@ -969,7 +985,7 @@ function itemHTML(i) {
           <option value="1" ${i.cat==='1'?'selected':''}>Risk / threat / distraction</option>
           <option value="2" ${i.cat==='2'?'selected':''}>Giving energy — want to do</option>
           <option value="3" ${i.cat==='3'?'selected':''}>Neutral / normal</option>
-          <option value="4" ${i.cat==='4'?'selected':''}>Taking energy — watch it</option>
+          <option value="4" ${i.cat==='4'?'selected':''}>Draining — but eat that frog</option>
         </select>
       </div>
       <div>
@@ -991,8 +1007,8 @@ function itemHTML(i) {
     <div class="star-toggle-row">
       <button class="${starToggleClass}" onclick="toggleStar(${i.id}, event)">${starToggleLabel}</button>
     </div>
-    <div class="edit-label">Note</div>
-    <input class="edit-field" id="edit-note-${i.id}" value="${(i.note||'').replace(/"/g,'&quot;')}" placeholder="Optional note" />
+    <div class="edit-label">Subtasks</div>
+    ${subtasksHTML(i)}
     <div class="edit-actions">
       <button class="edit-save" onclick="saveEdit(${i.id})">Save</button>
       <button class="edit-cancel" onclick="cancelEdit()">Cancel</button>
@@ -1012,11 +1028,12 @@ function itemHTML(i) {
           <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}" style="text-transform:none;letter-spacing:0">${i.tag === 'work' ? 'Work' : 'Personal'}</span>
           ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
         </div>
-        ${i.note ? `<div class="item-note">${i.note}</div>` : ''}
+        ${(i.subtasks && i.subtasks.filter(s=>!s.done).length) ? `<div class="item-note">${i.subtasks.filter(s=>!s.done).length} subtask${i.subtasks.filter(s=>!s.done).length>1?'s':''} remaining</div>` : ''}
       </div>
       ${priBadge}
       ${starBtn}
       ${priBtns}
+      <button class="cal-btn" onclick="scheduleTask(${i.id})" title="Schedule on Google Calendar"><i class="ti ti-calendar-plus"></i></button>
       <button class="del-btn" onclick="del(${i.id}, event)" aria-label="Remove"><i class="ti ti-trash"></i></button>
     </div>
     ${editPanel}
@@ -1041,10 +1058,12 @@ function endFocusSession() {
   if (sessionStartSecs === null) return;
   const elapsed = Math.round((sessionStartSecs - pomoSecs) / 60);
   if (elapsed > 0) {
+    const session = { id: Date.now(), mins: elapsed, duration: pomoDuration };
     const sessions = getSessions();
-    sessions.push({ mins: elapsed, duration: pomoDuration });
+    sessions.push(session);
     localStorage.setItem(todayKey(), JSON.stringify(sessions));
     updateFocusDisplay();
+    saveFocusSessionToSheet(session);
   }
   sessionStartSecs = null;
 }
@@ -1683,6 +1702,46 @@ function renderErrands() {
   }).join('');
 }
 
+// ── Schedule to calendar ──────────────────────────────────
+function scheduleTask(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const now = new Date();
+  now.setMinutes(0, 0, 0);
+  now.setHours(now.getHours() + 1);
+  const pad = n => String(n).padStart(2,'0');
+  const fmt = d => d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + 'T' + pad(d.getHours()) + pad(d.getMinutes()) + '00';
+  const end = new Date(now.getTime() + 60*60*1000);
+  const url = `https://calendar.google.com/calendar/r/eventedit?text=${encodeURIComponent(item.name)}&dates=${fmt(now)}/${fmt(end)}`;
+  window.open(url, '_blank');
+}
+
+// ── Focus time sync ────────────────────────────────────────
+async function saveFocusSessionToSheet(session) {
+  if (!scriptUrl) return;
+  try {
+    await fetch(scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'addFocusSession', session }) });
+  } catch(e) { /* silent fail — local still saved */ }
+}
+
+async function loadFocusFromSheet() {
+  if (!scriptUrl) return;
+  try {
+    const res = await fetch(scriptUrl + '?action=getFocusSessions');
+    if (!res.ok) return;
+    const data = await res.json();
+    const arr = Array.isArray(data) ? data : [];
+    if (!arr.length) return;
+    // Merge sheet sessions with local, deduplicate by id
+    const local = getSessions();
+    const localIds = new Set(local.map(s => s.id));
+    const merged = [...local];
+    arr.forEach(s => { if (!localIds.has(s.id)) merged.push(s); });
+    localStorage.setItem(todayKey(), JSON.stringify(merged));
+    updateFocusDisplay();
+  } catch(e) { /* use local */ }
+}
+
 // ── Init ──────────────────────────────────────────────────
 document.getElementById('f-name').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
 document.getElementById('o-name').addEventListener('keydown', e => { if (e.key === 'Enter') addOutreach(); });
@@ -1694,6 +1753,7 @@ applyClockMode();
 loadItems();
 loadOutreach();
 loadErrands();
+loadFocusFromSheet();
 </script>
 </body>
 </html>
