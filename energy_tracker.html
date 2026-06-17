@@ -68,6 +68,10 @@
   .clock-btn { background: none; border: none; cursor: pointer; font-size: 18px; padding: 2px 6px; border-radius: 6px; display: flex; align-items: center; transition: background .15s; }
   .clock-btn:hover { background: var(--bg2); }
   .clock-btn.off-clock { background: #E0F5EC; border-radius: 6px; }
+  html.dark .clock-btn i, html.dark .clock-btn { color: var(--text) !important; }
+  @media (prefers-color-scheme: dark) {
+    html:not(.light):not(.dark) .clock-btn i { color: var(--text) !important; }
+  }
 
   /* Setup banner */
   .setup-banner { background: #E6F1FB; border: 0.5px solid #B5D4F4; border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.25rem; font-size: 13px; color: #0C447C; line-height: 1.6; }
@@ -244,11 +248,19 @@
   .benrg { background: #E0F5EC; color: #1E6B46; }
   .bneut { background: #EBEBEB; color: #555552; }
   .bdrai { background: #FEF3E2; color: #7A4D10; }
-  html.dark .bneut { background: #3a3a38 !important; color: #e0e0da !important; }
-  html.dark .bdrai { background: #3a2800 !important; color: #f0b040 !important; }
+  html.dark .brisk     { background: transparent !important; color: #f87171 !important; border: 1.5px solid #f87171; box-shadow: 0 0 4px #f8717144; }
+  html.dark .benrg     { background: transparent !important; color: #6ee7b7 !important; border: 1.5px solid #6ee7b7; box-shadow: 0 0 4px #6ee7b744; }
+  html.dark .bneut     { background: transparent !important; color: #a8a8a3 !important; border: 1.5px solid #a8a8a3; }
+  html.dark .bdrai     { background: transparent !important; color: #fbbf24 !important; border: 1.5px solid #fbbf24; box-shadow: 0 0 4px #fbbf2444; }
+  html.dark .bwork     { background: transparent !important; color: #93c5fd !important; border: 1.5px solid #93c5fd; box-shadow: 0 0 4px #93c5fd44; }
+  html.dark .bpersonal { background: transparent !important; color: #c4b5fd !important; border: 1.5px solid #c4b5fd; box-shadow: 0 0 4px #c4b5fd44; }
   @media (prefers-color-scheme: dark) {
-    html:not(.light):not(.dark) .bneut { background: #3a3a38 !important; color: #e0e0da !important; }
-    html:not(.light):not(.dark) .bdrai { background: #3a2800 !important; color: #f0b040 !important; }
+    html:not(.light):not(.dark) .brisk     { background: transparent !important; color: #f87171 !important; border: 1.5px solid #f87171; box-shadow: 0 0 4px #f8717144; }
+    html:not(.light):not(.dark) .benrg     { background: transparent !important; color: #6ee7b7 !important; border: 1.5px solid #6ee7b7; box-shadow: 0 0 4px #6ee7b744; }
+    html:not(.light):not(.dark) .bneut     { background: transparent !important; color: #a8a8a3 !important; border: 1.5px solid #a8a8a3; }
+    html:not(.light):not(.dark) .bdrai     { background: transparent !important; color: #fbbf24 !important; border: 1.5px solid #fbbf24; box-shadow: 0 0 4px #fbbf2444; }
+    html:not(.light):not(.dark) .bwork     { background: transparent !important; color: #93c5fd !important; border: 1.5px solid #93c5fd; box-shadow: 0 0 4px #93c5fd44; }
+    html:not(.light):not(.dark) .bpersonal { background: transparent !important; color: #c4b5fd !important; border: 1.5px solid #c4b5fd; box-shadow: 0 0 4px #c4b5fd44; }
   }
   .bwork { background: #E8EFFE; color: #2A44A0; }
   .bpersonal { background: #F3E8FE; color: #6B28A0; }
@@ -912,6 +924,8 @@ const TAG_SORT_ORDER = {'work':0,'personal':1};
 
 function sortItems(arr) {
   return [...arr].sort((a, b) => {
+    // Cleared always sinks to bottom
+    if (a.cleared !== b.cleared) return a.cleared ? 1 : -1;
     const pa = parseInt(a.pri || '2'), pb = parseInt(b.pri || '2');
     const sa = a.starred ? 0 : 1, sb = b.starred ? 0 : 1;
     if (sa !== sb) return sa - sb;
@@ -932,6 +946,7 @@ function renderTodayView(vis) {
     const group = vis.filter(i => (i.pri||'2') === p);
     if (!group.length) return;
     const sorted = group.slice().sort((a,b) => {
+      if (a.cleared !== b.cleared) return a.cleared ? 1 : -1;
       const ca = CAT_SORT_ORDER[a.cat]??2, cb = CAT_SORT_ORDER[b.cat]??2;
       if (ca !== cb) return ca - cb;
       return (TAG_SORT_ORDER[a.tag]??1) - (TAG_SORT_ORDER[b.tag]??1);
@@ -1170,6 +1185,12 @@ function setDuration(min) {
   updatePomoDisplay();
   updatePomoBar();
 }
+// Prevent accidental preset changes — lock active preset display while running
+function syncPresetDisplay() {
+  document.querySelectorAll('.pomo-preset').forEach(b => {
+    b.classList.toggle('active', b.textContent.trim().startsWith(String(pomoDuration)));
+  });
+}
 function pomoToggle() {
   if (pomoRunning) {
     clearInterval(pomoInterval);
@@ -1181,6 +1202,7 @@ function pomoToggle() {
     if (pomoSecs <= 0) pomoSecs = pomoDuration * 60;
     pomoRunning = true;
     startFocusSession();
+    syncPresetDisplay();
     document.getElementById('pomo-start').textContent = 'Pause';
     document.getElementById('pomo-status').textContent = 'Running';
     pomoInterval = setInterval(() => {
@@ -1212,11 +1234,9 @@ function updatePomoDisplay() {
 }
 function updatePomoBar() {
   const pct = (pomoSecs / (pomoDuration * 60)) * 100;
-  document.getElementById('pomo-bar').style.width = pct + '%';
   const bar = document.getElementById('pomo-bar');
-  if (pct > 50)      bar.style.background = '#3A9E6C';
-  else if (pct > 20) bar.style.background = '#C47D24';
-  else               bar.style.background = '#D94848';
+  bar.style.width = pct + '%';
+  bar.style.background = '#3A9E6C';
 }
 
 
