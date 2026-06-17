@@ -1729,8 +1729,7 @@ function addSubtasks(id) {
   if (!input) return;
   const raw = input.value.trim();
   if (!raw) return;
-  const names = raw.split(/[,
-]+/).map(s => s.trim()).filter(Boolean);
+  const names = raw.split(/[,\u000a]+/).map(s => s.trim()).filter(Boolean);
   if (!item.subtasks) item.subtasks = [];
   names.forEach(name => {
     item.subtasks.push({ id: Math.floor(Date.now() + Math.random()*1000), name, done: false });
