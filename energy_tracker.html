@@ -1721,6 +1721,47 @@ function renderErrands() {
   }).join('');
 }
 
+// ── Subtask actions ───────────────────────────────────────
+function addSubtasks(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  const input = document.getElementById('subtask-input-' + id);
+  if (!input) return;
+  const raw = input.value.trim();
+  if (!raw) return;
+  const names = raw.split(/[,
+]+/).map(s => s.trim()).filter(Boolean);
+  if (!item.subtasks) item.subtasks = [];
+  names.forEach(name => {
+    item.subtasks.push({ id: Math.floor(Date.now() + Math.random()*1000), name, done: false });
+  });
+  input.value = '';
+  expandedId = id;
+  render();
+  apiPost({ action: 'update', item });
+}
+
+function toggleSubtask(itemId, subId) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  const sub = item.subtasks.find(s => s.id === subId);
+  if (!sub) return;
+  sub.done = !sub.done;
+  item.subtasks.sort((a,b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
+  expandedId = itemId;
+  render();
+  apiPost({ action: 'update', item });
+}
+
+function deleteSubtask(itemId, subId) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  item.subtasks = item.subtasks.filter(s => s.id !== subId);
+  expandedId = itemId;
+  render();
+  apiPost({ action: 'update', item });
+}
+
 // ── Schedule to calendar ──────────────────────────────────
 function scheduleTask(id) {
   const item = items.find(i => i.id === id);
