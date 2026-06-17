@@ -1043,10 +1043,7 @@ function itemHTML(i) {
         return `<div class="pri-opt ${sel}" data-val="${v}" onclick="selectPri(${i.id},'${v}')">${PRI[v].label}</div>`;
       }).join('')}
     </div>
-    <div class="edit-label">Today</div>
-    <div class="star-toggle-row">
-      <button class="${starToggleClass}" onclick="toggleStar(${i.id}, event)">${starToggleLabel}</button>
-    </div>
+
     <div class="edit-label">Subtasks</div>
     ${subtasksHTML(i)}
     <div class="edit-actions">
