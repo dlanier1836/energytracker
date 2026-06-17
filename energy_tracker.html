@@ -83,16 +83,16 @@
   .s-enrg { background: #F0FBF5; border-color: #C3EDD6; }
   .s-neut { background: var(--bg); }
   .s-drai { background: #FFFBF0; border-color: #FAEBD7; }
-  html.dark .s-neut, html.dark .s-neut:hover { background: #2a2a28 !important; border-color: #4a4a46 !important; }
-  html.dark .s-neut .stat-num { color: #e0e0da !important; }
-  html.dark .s-neut .stat-lbl { color: #a8a8a3 !important; }
-  html.dark .s-drai { background: #2a2010 !important; border-color: #5a4010 !important; }
-  html.dark .s-drai .stat-num { color: #f0b040 !important; }
+  html.dark .s-neut { background: #ffffff !important; border-color: #e0e0da !important; }
+  html.dark .s-neut .stat-num { color: #7A7A75 !important; }
+  html.dark .s-neut .stat-lbl { color: #9b9b96 !important; }
+  html.dark .s-drai { background: #FFFBF0 !important; border-color: #FAEBD7 !important; }
+  html.dark .s-drai .stat-num { color: #C47D24 !important; }
   @media (prefers-color-scheme: dark) {
-    html:not(.light):not(.dark) .s-neut { background: #2a2a28 !important; border-color: #4a4a46 !important; }
-    html:not(.light):not(.dark) .s-neut .stat-num { color: #e0e0da !important; }
-    html:not(.light):not(.dark) .s-drai { background: #2a2010 !important; border-color: #5a4010 !important; }
-    html:not(.light):not(.dark) .s-drai .stat-num { color: #f0b040 !important; }
+    html:not(.light):not(.dark) .s-neut { background: #ffffff !important; border-color: #e0e0da !important; }
+    html:not(.light):not(.dark) .s-neut .stat-num { color: #7A7A75 !important; }
+    html:not(.light):not(.dark) .s-drai { background: #FFFBF0 !important; border-color: #FAEBD7 !important; }
+    html:not(.light):not(.dark) .s-drai .stat-num { color: #C47D24 !important; }
   }
   .s-risk .stat-num { color: #D94848; }
   .s-enrg .stat-num { color: #3A9E6C; }
@@ -650,7 +650,7 @@ function normalize(r) {
     deadline: r.deadline || '',
     starred:  r.starred  === true || String(r.starred).toUpperCase()  === 'TRUE',
     archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
-    subtasks: (() => { try { return JSON.parse(r.subtasks || '[]'); } catch(e) { return []; } })(),
+    subtasks: (() => { try { const v = r.subtasks; if (!v || v === '' || v === '0' || v === 0) return []; const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch(e) { return []; } })(),
   };
 }
 
