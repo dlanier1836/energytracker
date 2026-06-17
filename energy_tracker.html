@@ -83,6 +83,17 @@
   .s-enrg { background: #F0FBF5; border-color: #C3EDD6; }
   .s-neut { background: var(--bg); }
   .s-drai { background: #FFFBF0; border-color: #FAEBD7; }
+  html.dark .s-neut, html.dark .s-neut:hover { background: #2a2a28 !important; border-color: #4a4a46 !important; }
+  html.dark .s-neut .stat-num { color: #e0e0da !important; }
+  html.dark .s-neut .stat-lbl { color: #a8a8a3 !important; }
+  html.dark .s-drai { background: #2a2010 !important; border-color: #5a4010 !important; }
+  html.dark .s-drai .stat-num { color: #f0b040 !important; }
+  @media (prefers-color-scheme: dark) {
+    html:not(.light):not(.dark) .s-neut { background: #2a2a28 !important; border-color: #4a4a46 !important; }
+    html:not(.light):not(.dark) .s-neut .stat-num { color: #e0e0da !important; }
+    html:not(.light):not(.dark) .s-drai { background: #2a2010 !important; border-color: #5a4010 !important; }
+    html:not(.light):not(.dark) .s-drai .stat-num { color: #f0b040 !important; }
+  }
   .s-risk .stat-num { color: #D94848; }
   .s-enrg .stat-num { color: #3A9E6C; }
   .s-neut .stat-num { color: #7A7A75; }
@@ -219,6 +230,8 @@
   .subtask-name.done { text-decoration: line-through; color: var(--text3); }
   .subtask-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 12px; padding: 2px; border-radius: 3px; }
   .subtask-del:hover { color: #D94848; }
+  .subtask-move { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 13px; padding: 1px 3px; border-radius: 3px; line-height: 1; }
+  .subtask-move:hover { color: var(--text); background: var(--bg3); }
   .subtask-add-row { display: flex; gap: 6px; margin-top: 6px; }
   .subtask-add-row input { flex: 1; padding: 5px 8px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; }
   .subtask-add-btn { padding: 5px 12px; border-radius: var(--radius); border: none; background: var(--bg3); color: var(--text); font-size: 12px; cursor: pointer; white-space: nowrap; }
@@ -228,6 +241,12 @@
   .benrg { background: #E0F5EC; color: #1E6B46; }
   .bneut { background: #EBEBEB; color: #555552; }
   .bdrai { background: #FEF3E2; color: #7A4D10; }
+  html.dark .bneut { background: #3a3a38 !important; color: #e0e0da !important; }
+  html.dark .bdrai { background: #3a2800 !important; color: #f0b040 !important; }
+  @media (prefers-color-scheme: dark) {
+    html:not(.light):not(.dark) .bneut { background: #3a3a38 !important; color: #e0e0da !important; }
+    html:not(.light):not(.dark) .bdrai { background: #3a2800 !important; color: #f0b040 !important; }
+  }
   .bwork { background: #E8EFFE; color: #2A44A0; }
   .bpersonal { background: #F3E8FE; color: #6B28A0; }
   .pri-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
@@ -959,6 +978,8 @@ function subtasksHTML(item) {
         ${s.done ? '<i class="ti ti-check"></i>' : ''}
       </div>
       <span class="subtask-name ${s.done ? 'done' : ''}">${s.name}</span>
+      <button class="subtask-move" onclick="moveSubtask(${item.id}, ${s.id},'up')" title="Move up">↑</button>
+      <button class="subtask-move" onclick="moveSubtask(${item.id}, ${s.id},'down')" title="Move down">↓</button>
       <button class="subtask-del" onclick="deleteSubtask(${item.id}, ${s.id})"><i class="ti ti-x"></i></button>
     </div>`).join('');
   return `
@@ -1756,6 +1777,21 @@ function deleteSubtask(itemId, subId) {
   const item = items.find(i => i.id === itemId);
   if (!item) return;
   item.subtasks = item.subtasks.filter(s => s.id !== subId);
+  expandedId = itemId;
+  render();
+  apiPost({ action: 'update', item });
+}
+
+function moveSubtask(itemId, subId, dir) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  const idx = item.subtasks.findIndex(s => s.id === subId);
+  if (idx === -1) return;
+  const newIdx = dir === 'up' ? idx - 1 : idx + 1;
+  if (newIdx < 0 || newIdx >= item.subtasks.length) return;
+  const tmp = item.subtasks[idx];
+  item.subtasks[idx] = item.subtasks[newIdx];
+  item.subtasks[newIdx] = tmp;
   expandedId = itemId;
   render();
   apiPost({ action: 'update', item });
