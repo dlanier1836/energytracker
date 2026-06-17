@@ -62,6 +62,9 @@
   .h1-right { margin-left: auto; }
   .theme-btn { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 20px; padding: 2px 4px; border-radius: 6px; display: flex; align-items: center; }
   .theme-btn:hover { color: var(--text); background: var(--bg2); }
+  .today-hdr-btn { background: none; border: none; cursor: pointer; font-size: 20px; padding: 2px 5px; border-radius: 6px; color: var(--text3); transition: all .15s; line-height: 1; }
+  .today-hdr-btn:hover { color: #f59e0b; background: var(--bg2); }
+  .today-hdr-btn.active { color: #f59e0b; }
   .clock-btn { background: none; border: none; cursor: pointer; font-size: 18px; padding: 2px 6px; border-radius: 6px; display: flex; align-items: center; transition: background .15s; }
   .clock-btn:hover { background: var(--bg2); }
   .clock-btn.off-clock { background: #E0F5EC; border-radius: 6px; }
@@ -370,6 +373,7 @@
   <h1>
     <i class="ti ti-bolt" style="color:#C47D24"></i> Energy tracker
     <span class="h1-right" style="display:flex;align-items:center;gap:4px">
+      <button class="today-hdr-btn" onclick="toggleTodayHeader()" id="today-hdr-btn" title="Toggle Today view">★</button>
       <button class="clock-btn" onclick="toggleClock()" id="clock-btn" title="Toggle on/off the clock">
         <i id="clock-icon" class="ti ti-calendar-week" aria-hidden="true"></i>
       </button>
@@ -603,6 +607,19 @@ function updateThemeIcon() {
 initTheme();
 
 // ── Clock mode ────────────────────────────────────────────
+function toggleTodayHeader() {
+  if (activePills.has('starred')) {
+    // turn off — go back to all
+    activePills = new Set(['all']);
+  } else {
+    activePills = new Set(['starred']);
+  }
+  updateFilterUI();
+  render();
+  renderOutreach();
+  document.getElementById('today-hdr-btn').classList.toggle('active', activePills.has('starred'));
+}
+
 function toggleClock() {
   offClock = !offClock;
   localStorage.setItem('offClock', offClock);
@@ -859,6 +876,8 @@ function updateFilterUI() {
   document.querySelectorAll('.stat').forEach(el => {
     el.classList.toggle('active-stat', el.id === 'stat-' + catFilter);
   });
+  const todayBtn = document.getElementById('today-hdr-btn');
+  if (todayBtn) todayBtn.classList.toggle('active', activePills.has('starred'));
 }
 
 function visible() {
@@ -1107,6 +1126,7 @@ function endFocusSession() {
 
 function resetFocusDay() {
   localStorage.removeItem(todayKey());
+  localStorage.setItem('focusResetAt', Date.now().toString());
   updateFocusDisplay();
 }
 
@@ -1824,13 +1844,15 @@ async function loadFocusFromSheet() {
     const data = await res.json();
     const arr = Array.isArray(data) ? data : [];
     if (!arr.length) return;
-    // Sheet sessions use id as truth — replace local with sheet if sheet has more total mins
-    const sheetMins = arr.reduce((s, x) => s + Number(x.mins || 0), 0);
+    // Filter out sessions saved before last reset
+    const resetAt = parseInt(localStorage.getItem('focusResetAt') || '0');
+    const filtered = arr.filter(s => Number(s.id) > resetAt);
+    if (!filtered.length) return;
+    const sheetMins = filtered.reduce((s, x) => s + Number(x.mins || 0), 0);
     const local = getSessions();
     const localMins = local.reduce((s, x) => s + Number(x.mins || 0), 0);
     if (sheetMins > localMins) {
-      // Normalize sheet sessions to match local format
-      const normalized = arr.map(s => ({ id: Number(s.id), mins: Number(s.mins), duration: Number(s.duration) }));
+      const normalized = filtered.map(s => ({ id: Number(s.id), mins: Number(s.mins), duration: Number(s.duration) }));
       localStorage.setItem(todayKey(), JSON.stringify(normalized));
       updateFocusDisplay();
     }
