@@ -650,7 +650,7 @@ function normalize(r) {
     deadline: r.deadline || '',
     starred:  r.starred  === true || String(r.starred).toUpperCase()  === 'TRUE',
     archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
-    subtasks: (() => { try { const v = r.subtasks; if (!v || v === '' || v === '0' || v === 0) return []; const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch(e) { return []; } })(),
+    subtasks: (() => { try { const v = r.subtasks; if (!v || v === '' || v === '0' || v === 0) return []; if (Array.isArray(v)) return v; const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch(e) { return []; } })(),
   };
 }
 
