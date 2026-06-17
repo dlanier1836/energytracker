@@ -1824,13 +1824,16 @@ async function loadFocusFromSheet() {
     const data = await res.json();
     const arr = Array.isArray(data) ? data : [];
     if (!arr.length) return;
-    // Merge sheet sessions with local, deduplicate by id
+    // Sheet sessions use id as truth — replace local with sheet if sheet has more total mins
+    const sheetMins = arr.reduce((s, x) => s + Number(x.mins || 0), 0);
     const local = getSessions();
-    const localIds = new Set(local.map(s => s.id));
-    const merged = [...local];
-    arr.forEach(s => { if (!localIds.has(s.id)) merged.push(s); });
-    localStorage.setItem(todayKey(), JSON.stringify(merged));
-    updateFocusDisplay();
+    const localMins = local.reduce((s, x) => s + Number(x.mins || 0), 0);
+    if (sheetMins > localMins) {
+      // Normalize sheet sessions to match local format
+      const normalized = arr.map(s => ({ id: Number(s.id), mins: Number(s.mins), duration: Number(s.duration) }));
+      localStorage.setItem(todayKey(), JSON.stringify(normalized));
+      updateFocusDisplay();
+    }
   } catch(e) { /* use local */ }
 }
 
