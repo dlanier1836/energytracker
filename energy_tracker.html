@@ -951,6 +951,25 @@ function render() {
   listEl.innerHTML = combined || '<div class="empty">Nothing here</div>';
 }
 
+function subtasksHTML(item) {
+  const subs = item.subtasks || [];
+  const rows = subs.map(s => `
+    <div class="subtask-row">
+      <div class="subtask-chk ${s.done ? 'done' : ''}" onclick="toggleSubtask(${item.id}, ${s.id})">
+        ${s.done ? '<i class="ti ti-check"></i>' : ''}
+      </div>
+      <span class="subtask-name ${s.done ? 'done' : ''}">${s.name}</span>
+      <button class="subtask-del" onclick="deleteSubtask(${item.id}, ${s.id})"><i class="ti ti-x"></i></button>
+    </div>`).join('');
+  return `
+    <div class="subtask-list">${rows}</div>
+    <div class="subtask-add-row">
+      <input id="subtask-input-${item.id}" type="text" placeholder="Add subtasks, comma-separated…"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();addSubtasks(${item.id})}" />
+      <button class="subtask-add-btn" onclick="addSubtasks(${item.id})">Add</button>
+    </div>`;
+}
+
 function itemHTML(i) {
   const c = CATS[i.cat];
   const pri = i.pri || '2';
