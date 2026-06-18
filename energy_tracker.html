@@ -619,6 +619,7 @@
         <button id="o-star-btn" onclick="toggleOutreachAddStar()" title="Star for today" style="background:none;border:0.5px solid var(--border2);color:var(--text3);font-size:16px;padding:5px 8px;border-radius:var(--radius);cursor:pointer;white-space:nowrap">★</button>
       </div>
       <div class="outreach-list" id="outreach-list"></div>
+      <div id="outreach-pagination" style="display:none;align-items:center;gap:8px;padding:4px 14px 6px;flex-wrap:wrap"></div>
       <div class="outreach-footer">
         <span class="outreach-done-count" id="outreach-done-count"></span>
         <button class="outreach-archive-btn" id="outreach-archive-btn" onclick="archiveOutreach()" style="display:none">Archive done</button>
@@ -1919,7 +1920,14 @@ function renderOutreach() {
     return;
   }
 
-  document.getElementById('outreach-list').innerHTML = sorted.map(o => {
+  // Pagination — show 15 at a time
+  const PAGE_SIZE = 15;
+  if (typeof window._outreachPage === 'undefined') window._outreachPage = 0;
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+  const page = Math.min(window._outreachPage, totalPages - 1);
+  const paged = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  document.getElementById('outreach-list').innerHTML = paged.map(o => {
     const pri = o.pri || '2';
     const pb  = O_PRI_BADGE[pri];
     const priBadge = pb && pb.badge ? `<span class="outreach-pri-badge ${pb.cls}">${pb.badge}</span>` : '';
@@ -1959,8 +1967,20 @@ function renderOutreach() {
     </div>`;
   }).join('');
 
+  // Pagination controls
+  const pgEl = document.getElementById('outreach-pagination');
+  if (pgEl) {
+    if (totalPages > 1) {
+      pgEl.style.display = 'flex';
+      pgEl.innerHTML = '<span style="font-size:12px;color:var(--text2)">' + (page * PAGE_SIZE + 1) + '–' + Math.min((page+1)*PAGE_SIZE, sorted.length) + ' of ' + sorted.length + '</span>'
+        + (page > 0 ? '<button class="snooze-btn" onclick="window._outreachPage='+page+'-1;renderOutreach()">← Prev</button>' : '')
+        + (page < totalPages-1 ? '<button class="snooze-btn" onclick="window._outreachPage='+page+'+1;renderOutreach()">Next →</button>' : '');
+    } else {
+      pgEl.style.display = 'none';
+    }
+  }
+
   // Also re-render task list so Today filter picks up outreach stars
-  // (only if we're in starred/prioritized view)
   if (activePills.has('starred') || activePills.has('prioritized')) render();
 }
 
@@ -2009,7 +2029,7 @@ function outreachItemHTML(o) {
 
 
 // ── Delegated ─────────────────────────────────────────────
-let delegatedCollapsed = false;
+let delegatedCollapsed = true;
 
 async function recallDelegated(id) {
   const item = items.find(i => i.id === id);
@@ -2047,17 +2067,20 @@ function delegatedPanelHTML() {
     const daysLeft = expiry ? Math.ceil((expiry - new Date()) / 86400000) : null;
     let expiryLabel = '';
     if (expiry) {
-      if (daysLeft < 0)       expiryLabel = '<span style="font-size:11px;color:#D94848;font-weight:600">↩ overdue</span>';
+      if (daysLeft < 0)        expiryLabel = '<span style="font-size:11px;color:#D94848;font-weight:600">↩ overdue</span>';
       else if (daysLeft === 0) expiryLabel = '<span style="font-size:11px;color:#C47D24;font-weight:600">↩ today</span>';
-      else                    expiryLabel = '<span style="font-size:11px;color:#185FA5">↩ ' + expiry.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</span>';
+      else                     expiryLabel = '<span style="font-size:11px;color:#185FA5">↩ ' + expiry.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</span>';
     }
-    const delegateInfo = i.delegatedTo
-      ? '<span style="font-size:11px;color:#185FA5;margin-top:2px;display:block">→ ' + i.delegatedTo + ' ' + expiryLabel + '</span>'
-      : '';
-    const recallBtn = '<button class="delegated-recall" onclick="event.stopPropagation();recallDelegated(' + i.id + ')">↑ Recall</button>';
-    const SEP = '</div>\n      <button class="del-btn"';
-    const REP = delegateInfo + '</div>\n      ' + recallBtn + '\n      <button class="del-btn"';
-    return itemHTML(i).replace(SEP, REP);
+    const meta = '<div style="font-size:11px;color:#185FA5;margin-top:3px">'
+      + (i.delegatedTo ? '→ ' + i.delegatedTo + ' ' : '')
+      + expiryLabel + '</div>';
+    const recall = '<button class="delegated-recall" style="margin-left:4px" onclick="event.stopPropagation();recallDelegated(' + i.id + ')">↑ Recall</button>';
+    const baseCard = itemHTML(i);
+    // Append meta info inside item-body by finding closing tag
+    const cardWithMeta = baseCard.replace(/(<div class="item-body">[\s\S]*?<\/div>)\s*(<\/div>)/, '$1' + meta + '$2');
+    return '<div style="position:relative">' + cardWithMeta
+      + '<div style="position:absolute;bottom:8px;right:44px">' + recall + '</div>'
+      + '</div>';
   }).join('');
 
   return `<div class="delegated-panel ${isCollapsed ? 'collapsed' : ''}" id="delegated-panel-inline" onclick="if(event.target===this||event.target.closest('.delegated-hdr'))toggleDelegated()">
