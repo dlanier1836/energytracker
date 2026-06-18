@@ -338,9 +338,8 @@
   .del-btn:hover { color: #D94848; background: #FDE8E8; }
   .cal-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 4px; border-radius: var(--radius); display: flex; align-items: center; flex-shrink: 0; }
   .cal-btn:hover { color: #185FA5; background: #E6F1FB; }
-  .rev-btn { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700; padding: 2px 5px; border-radius: 4px; flex-shrink: 0; color: var(--text3); line-height: 1; }
-  .rev-btn.on { color: #3A9E6C; }
-  .rev-btn:hover { background: var(--bg2); }
+  .rev-badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #E0F5EC; color: #1E6B46; flex-shrink: 0; border: 1px solid #3A9E6C; line-height: 1.4; }
+  html.dark .rev-badge { background: transparent; color: #6ee7b7; border-color: #6ee7b7; box-shadow: 0 0 4px #6ee7b744; }
   /* Delegated panel */
   .delegated-panel { border-radius: var(--radius-lg); border: 1.5px solid #6B28A0; margin-bottom: 8px; overflow: hidden; background: var(--bg); }
   .delegated-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #F3E8FE; border-bottom: 0.5px solid #d4b8f0; cursor: pointer; user-select: none; }
@@ -960,6 +959,21 @@ async function toggleRevenue(id, e) {
   await apiPost({ action: 'update', item });
 }
 
+function toggleRevenueEdit(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.revenue = !item.revenue;
+  // Update button in place
+  const btn = document.getElementById('edit-revenue-' + id);
+  if (btn) {
+    btn.className = item.revenue ? 'remission-restore-btn' : 'snooze-btn';
+    btn.textContent = item.revenue ? '$ Revenue item — tap to unmark' : '$ Mark as revenue impact';
+    btn.style.fontSize = '12px';
+  }
+  // Re-render the row badge without closing edit panel
+  apiPost({ action: 'update', item });
+}
+
 async function del(id, e) {
   e.stopPropagation();
   items = items.filter(i => i.id !== id);
@@ -1013,7 +1027,7 @@ async function toggleStar(id, e) {
 }
 
 function toggleExpand(id, e) {
-  if (e.target.closest('.chk') || e.target.closest('.del-btn') || e.target.closest('.pri-btn') || e.target.closest('.star-btn') || e.target.closest('.cal-btn') || e.target.closest('.rev-btn')) return;
+  if (e.target.closest('.chk') || e.target.closest('.del-btn') || e.target.closest('.pri-btn') || e.target.closest('.star-btn') || e.target.closest('.cal-btn')) return;
   expandedId = (expandedId === id) ? null : id;
   render();
 }
@@ -1090,7 +1104,7 @@ function visible() {
   const now = new Date();
   return items.filter(i => {
     if (i.remission) return false;
-    if (i.delegated) return false;
+    if (i.delegated && !searchQuery) return false;
     // Snoozed items hidden unless searching
     if (i.snoozedUntil && !searchQuery) {
       const snoozeDate = new Date(i.snoozedUntil);
@@ -1327,6 +1341,14 @@ function itemHTML(i) {
       }).join('')}
     </div>
 
+    <div class="edit-label">Revenue impact</div>
+    <div style="margin-bottom:8px">
+      <button id="edit-revenue-${i.id}" onclick="toggleRevenueEdit(${i.id})"
+        class="${i.revenue ? 'remission-restore-btn' : 'snooze-btn'}"
+        style="font-size:12px">
+        ${i.revenue ? '$ Revenue item — tap to unmark' : '$ Mark as revenue impact'}
+      </button>
+    </div>
     <div class="edit-label">Snooze until <span style="font-weight:400;text-transform:none;font-size:11px">(optional — hides until date, still searchable)</span></div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
       <input class="snooze-input edit-field" type="date" id="edit-snooze-${i.id}" value="${i.snoozedUntil || ''}" style="margin-bottom:0;flex:1" />
@@ -1360,7 +1382,7 @@ function itemHTML(i) {
         ${(i.subtasks && i.subtasks.length) ? `<div class="subtask-pips"><span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-right:4px">subtasks</span>${i.subtasks.map(s => `<div class="pip ${s.done ? 'done' : 'open'}" title="${s.name}"></div>`).join('')}</div>` : ''}
       </div>
       ${priBadge}
-      <button class="rev-btn ${i.revenue ? 'on' : ''}" onclick="toggleRevenue(${i.id}, event)" title="${i.revenue ? 'Revenue item (tap to unmark)' : 'Mark as revenue impact'}">$</button>
+      ${i.revenue ? '<span class="rev-badge" title="Revenue item">$</span>' : ''}
       ${starBtn}
       <select class="est-select" onclick="event.stopPropagation()" onchange="setEstimate(${i.id}, this.value)" title="Time estimate">
         <option value="0"   ${i.estimate===0 ?'selected':''}>–</option>
