@@ -450,11 +450,11 @@
     .outreach-add button { flex: 1; }
     .outreach-type-toggle { display: none; }
     /* Two-line outreach rows on mobile — name line + controls line */
-    .outreach-row { flex-wrap: wrap; padding: 8px 6px; gap: 4px; }
+    .outreach-row { display: flex !important; flex-wrap: wrap !important; padding: 8px 6px; gap: 4px; align-items: center; }
     .outreach-row .outreach-chk      { flex: 0 0 auto; }
     .outreach-row .e-dot             { flex: 0 0 auto; }
     .outreach-row .outreach-icon     { flex: 0 0 auto; }
-    .outreach-row .outreach-name-wrap { flex: 1 1 100px; min-width: 100px; }
+    .outreach-row .outreach-name-wrap { flex: 1 1 200px; min-width: 200px; max-width: calc(100% - 52px); }
     .outreach-row .outreach-name     { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
     /* Force a line break before controls */
     .outreach-row .ping-btn          { flex: 0 0 auto; margin-left: auto; }
