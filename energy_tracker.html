@@ -373,23 +373,23 @@
   .star-toggle-btn.starred-on { background: #f59e0b; border-color: #f59e0b; color: #fff; }
 
   /* Risks in Remission panel */
-  .remission-panel { border-radius: var(--radius-lg); border: 0.5px solid #D94848; margin-bottom: 1rem; overflow: hidden; background: var(--bg); }
-  .remission-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #FEF2F2; border-bottom: 0.5px solid #FACACA; cursor: pointer; user-select: none; }
-  html.dark .remission-hdr { background: #2a1212; border-color: #4a2020; }
-  .remission-hdr-title { font-size: 12px; font-weight: 600; color: #9B2626; flex: 1; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .04em; }
-  html.dark .remission-hdr-title { color: #f87171; }
-  .remission-count { font-size: 11px; border: 0.5px solid #D94848; border-radius: 20px; padding: 1px 8px; color: #D94848; }
-  html.dark .remission-count { border-color: #f87171; color: #f87171; }
-  .remission-chevron { font-size: 15px; color: #D94848; transition: transform .2s; }
-  html.dark .remission-chevron { color: #f87171; }
+  .remission-panel { border-radius: var(--radius-lg); border: 0.5px solid #3A9E6C; margin-bottom: 6px; overflow: hidden; background: var(--bg); }
+  .remission-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #F0FBF5; border-bottom: 0.5px solid #C3EDD6; cursor: pointer; user-select: none; }
+  html.dark .remission-hdr { background: #122212; border-color: #1e4a30; }
+  .remission-hdr-title { font-size: 12px; font-weight: 600; color: #1E6B46; flex: 1; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  html.dark .remission-hdr-title { color: #6ee7b7; }
+  .remission-count { font-size: 11px; border: 0.5px solid #3A9E6C; border-radius: 20px; padding: 1px 8px; color: #3A9E6C; }
+  html.dark .remission-count { border-color: #6ee7b7; color: #6ee7b7; }
+  .remission-chevron { font-size: 15px; color: #3A9E6C; transition: transform .2s; }
+  html.dark .remission-chevron { color: #6ee7b7; }
   .remission-panel.collapsed .remission-chevron { transform: rotate(-90deg); }
   .remission-panel.collapsed .remission-body { display: none; }
   .remission-body { padding: 6px 10px 8px; }
   .remission-empty { font-size: 13px; color: var(--text3); text-align: center; padding: .75rem; }
-  .remission-btn { background: none; border: 0.5px solid #D94848; color: #D94848; font-size: 11px; padding: 2px 8px; border-radius: 20px; cursor: pointer; flex-shrink: 0; white-space: nowrap; }
-  .remission-btn:hover { background: #FDE8E8; }
-  html.dark .remission-btn { border-color: #f87171; color: #f87171; }
-  html.dark .remission-btn:hover { background: #2a1212; }
+  .remission-restore-btn { background: none; border: 0.5px solid #3A9E6C; color: #3A9E6C; font-size: 11px; padding: 2px 8px; border-radius: 20px; cursor: pointer; flex-shrink: 0; white-space: nowrap; }
+  .remission-restore-btn:hover { background: #E0F5EC; }
+  html.dark .remission-restore-btn { border-color: #6ee7b7; color: #6ee7b7; }
+  html.dark .remission-restore-btn:hover { background: #122212; }
 
   /* Errands panel — mirrors outreach but simpler */
   .errands-panel { background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border); margin-bottom: 1.25rem; overflow: hidden; }
@@ -845,7 +845,7 @@ async function addItem() {
     starred:   addStarred,
     archived:  false,
     subtasks:  [],
-    estimate:  0,
+    estimate:  30,
     remission: false,
   };
   items.unshift(item);
@@ -1102,10 +1102,15 @@ function render() {
     // Group by category
     CAT_ORDER.forEach(k => {
       const group = vis.filter(i => i.cat === k);
-      if (!group.length) return;
       const c = CATS[k];
-      html += `<div class="section-hdr"><span class="dot ${c.dot}"></span>${c.label}</div>`;
-      sortItems(group).forEach(i => { html += itemHTML(i); });
+      if (group.length) {
+        html += `<div class="section-hdr"><span class="dot ${c.dot}"></span>${c.label}</div>`;
+        sortItems(group).forEach(i => { html += itemHTML(i); });
+      }
+      // After Risk group, inject Risks in Remission panel
+      if (k === '1') {
+        html += remissionPanelHTML();
+      }
     });
   }
 
@@ -1213,6 +1218,8 @@ function itemHTML(i) {
     <div class="edit-actions">
       <button class="edit-save" onclick="saveEdit(${i.id})">Save</button>
       <button class="edit-cancel" onclick="cancelEdit()">Cancel</button>
+      ${i.cat === '1' && !i.remission ? `<button class="remission-restore-btn" onclick="sendToRemission(${i.id}, event)" style="margin-left:auto">→ In Remission</button>` : ''}
+      ${i.remission ? `<button class="remission-restore-btn" onclick="restoreFromRemission(${i.id})" style="margin-left:auto">↑ Restore from Remission</button>` : ''}
     </div>
   </div>`;
 
@@ -1235,17 +1242,16 @@ function itemHTML(i) {
       ${priBadge}
       ${starBtn}
       <select class="est-select" onclick="event.stopPropagation()" onchange="setEstimate(${i.id}, this.value)" title="Time estimate">
-        <option value="0"   ${(!i.estimate||i.estimate===0)?'selected':''}>–</option>
+        <option value="0"   ${i.estimate===0 ?'selected':''}>–</option>
         <option value="5"   ${i.estimate===5  ?'selected':''}>5m</option>
         <option value="15"  ${i.estimate===15 ?'selected':''}>15m</option>
-        <option value="30"  ${i.estimate===30 ?'selected':''}>30m</option>
+        <option value="30"  ${(!i.estimate||i.estimate===30)?'selected':''}>30m</option>
         <option value="60"  ${i.estimate===60 ?'selected':''}>1h</option>
         <option value="120" ${i.estimate===120?'selected':''}>2h</option>
         <option value="240" ${i.estimate===240?'selected':''}>4h</option>
       </select>
       ${priBtns}
       <button class="cal-btn" onclick="scheduleTask(${i.id})" title="Schedule on Google Calendar"><i class="ti ti-calendar-plus"></i></button>
-      ${i.cat === '1' && !i.remission ? `<button class="remission-btn" onclick="sendToRemission(${i.id}, event)" title="Move to Risks in Remission" style="font-size:11px;padding:2px 6px">→ Remission</button>` : ''}
       <button class="del-btn" onclick="del(${i.id}, event)" aria-label="Remove"><i class="ti ti-trash"></i></button>
     </div>
     ${editPanel}
@@ -1776,24 +1782,42 @@ async function restoreFromRemission(id) {
 
 function toggleRemission() {
   remissionCollapsed = !remissionCollapsed;
-  document.getElementById('remission-panel').classList.toggle('collapsed', remissionCollapsed);
+  const p = document.getElementById('remission-panel-inline') || document.getElementById('remission-panel');
+  if (p) p.classList.toggle('collapsed', remissionCollapsed);
+}
+
+function remissionPanelHTML() {
+  const inRemission = items.filter(i => i.remission && !i.archived);
+  if (!inRemission.length || offClock) return '';
+  const isCollapsed = remissionCollapsed;
+  const rows = inRemission.map(i => `
+    <div class="outreach-row">
+      <span style="flex:1;font-size:13px;color:var(--text2)">${i.name}</span>
+      <button class="remission-restore-btn" onclick="restoreFromRemission(${i.id})">↑ Restore</button>
+    </div>`).join('');
+  return `<div class="remission-panel ${isCollapsed ? 'collapsed' : ''}" id="remission-panel-inline">
+    <div class="remission-hdr" onclick="toggleRemission()">
+      <div class="remission-hdr-title">
+        <i class="ti ti-shield-check" style="font-size:14px" aria-hidden="true"></i>
+        Risks in Remission
+        <span class="remission-count">${inRemission.length}</span>
+      </div>
+      <i class="ti ti-chevron-down remission-chevron" aria-hidden="true"></i>
+    </div>
+    <div class="remission-body">${rows}</div>
+  </div>`;
 }
 
 function renderRemission() {
-  const inRemission = items.filter(i => i.remission && !i.archived);
-  const panel = document.getElementById('remission-panel');
-  if (!panel) return;
-  panel.style.display = inRemission.length > 0 && !offClock ? 'block' : 'none';
-  document.getElementById('remission-count').textContent = inRemission.length;
-  if (!inRemission.length) {
-    document.getElementById('remission-body').innerHTML = '<div class="remission-empty">No risks in remission</div>';
+  // Replace anchor in list if present
+  const anchor = document.getElementById('remission-inline-anchor');
+  if (anchor) {
+    anchor.outerHTML = remissionPanelHTML();
     return;
   }
-  document.getElementById('remission-body').innerHTML = inRemission.map(i => `
-    <div class="outreach-row" style="border-bottom: 0.5px solid var(--border)">
-      <span style="flex:1;font-size:13px;color:var(--text2)">${i.name}</span>
-      <button class="remission-btn" onclick="restoreFromRemission(${i.id})">↑ Restore</button>
-    </div>`).join('');
+  // Hide the standalone panel since it's now inline
+  const panel = document.getElementById('remission-panel');
+  if (panel) panel.style.display = 'none';
 }
 
 // ── Errands ──────────────────────────────────────────────
