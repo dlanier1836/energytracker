@@ -69,8 +69,12 @@
   .clock-btn:hover { background: var(--bg2); }
   .clock-btn.off-clock { background: #E0F5EC; border-radius: 6px; }
   html.dark .clock-btn i, html.dark .clock-btn { color: var(--text) !important; }
+  html.dark .clock-btn.off-clock { background: #1a3a2a !important; }
+  html.dark .clock-btn.off-clock i { filter: brightness(1.8) saturate(0.8); }
   @media (prefers-color-scheme: dark) {
     html:not(.light):not(.dark) .clock-btn i { color: var(--text) !important; }
+    html:not(.light):not(.dark) .clock-btn.off-clock { background: #1a3a2a !important; }
+    html:not(.light):not(.dark) .clock-btn.off-clock i { filter: brightness(1.8) saturate(0.8); }
   }
 
   /* Setup banner */
@@ -255,6 +259,13 @@
   .item-name.cleared { text-decoration: line-through; color: var(--text3); }
   .item-meta { display: flex; align-items: center; gap: 5px; margin-top: 3px; flex-wrap: wrap; }
   .item-note { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .deadline-tag { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
+  .deadline-ok       { background: #E0F5EC; color: #1E6B46; }
+  .deadline-soon     { background: #FEF3E2; color: #7A4D10; }
+  .deadline-overdue  { background: #FDE8E8; color: #9B2626; }
+  html.dark .deadline-ok     { background: transparent; color: #6ee7b7; border: 1px solid #6ee7b7; }
+  html.dark .deadline-soon   { background: transparent; color: #fbbf24; border: 1px solid #fbbf24; }
+  html.dark .deadline-overdue { background: transparent; color: #f87171; border: 1px solid #f87171; box-shadow: 0 0 4px #f8717144; }
   /* Subtasks */
   .subtask-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
   .subtask-row { display: flex; align-items: center; gap: 6px; }
@@ -468,8 +479,8 @@
     </div>
     <div class="add-row">
       <select id="f-cat">
-        <option value="1">Risk / threat / distraction</option>
         <option value="2">Giving energy — want to do</option>
+        <option value="1">Risk / threat / distraction</option>
         <option value="3">Neutral / normal</option>
         <option value="4">Draining — but eat that frog</option>
       </select>
@@ -666,6 +677,9 @@ function toggleClock() {
 }
 function applyClockMode() {
   const ci = document.getElementById('clock-icon'); ci.className = offClock ? 'ti ti-beach' : 'ti ti-calendar-week';
+  // Switch default tag based on mode
+  const tagEl = document.getElementById('f-tag');
+  if (tagEl) tagEl.value = offClock ? 'personal' : 'work';
   document.getElementById('clock-btn').classList.toggle('off-clock', offClock);
   // Show/hide outreach vs errands panel
   const outreachPanel = document.getElementById('outreach-panel');
@@ -867,7 +881,8 @@ async function saveEdit(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   item.name    = document.getElementById('edit-name-' + id).value.trim() || item.name;
-  item.cat     = document.getElementById('edit-cat-'  + id).value;
+  item.cat      = document.getElementById('edit-cat-'  + id).value;
+  item.deadline = document.getElementById('edit-deadline-' + id).value || '';
   item.tag     = document.getElementById('edit-tag-'  + id).value;
   // pri already updated in-place via selectPri
   expandedId = null;
@@ -961,6 +976,11 @@ function sortItems(arr) {
     if (ca !== cb) return ca - cb;
     const ta = TAG_SORT_ORDER[a.tag] ?? 1, tb = TAG_SORT_ORDER[b.tag] ?? 1;
     if (ta !== tb) return ta - tb;
+    // Deadline nudge — items due within 3 days float up within same priority/cat/tag
+    const da = a.deadline ? Math.round((new Date(a.deadline) - new Date()) / 86400000) : 999;
+    const db = b.deadline ? Math.round((new Date(b.deadline) - new Date()) / 86400000) : 999;
+    const urgA = da <= 3 ? 0 : 1, urgB = db <= 3 ? 0 : 1;
+    if (urgA !== urgB) return urgA - urgB;
     return b.id - a.id;
   });
 }
@@ -988,7 +1008,13 @@ function renderTodayView(vis) {
 function render() {
   // Stats
   const counts = { '1':0, '2':0, '3':0, '4':0 };
-  items.filter(i => !i.cleared && (!offClock || i.tag === 'personal')).forEach(i => { if (counts[i.cat] !== undefined) counts[i.cat]++; });
+  const todayStar = activePills.has('starred') && !catFilter;
+  items.filter(i => {
+    if (i.cleared) return false;
+    if (offClock && i.tag === 'work') return false;
+    if (todayStar && !i.starred) return false;
+    return true;
+  }).forEach(i => { if (counts[i.cat] !== undefined) counts[i.cat]++; });
   // Show archive-all button only when cleared items exist
   const archiveBtn = document.getElementById('archive-all-btn');
   if (archiveBtn) archiveBtn.style.display = items.some(i => i.cleared) ? 'inline-block' : 'none';
@@ -1029,6 +1055,19 @@ function render() {
 
   const combined = html;
   listEl.innerHTML = combined || '<div class="empty">Nothing here</div>';
+}
+
+function deadlineHTML(item) {
+  if (!item.deadline || item.cleared) return '';
+  const dl = new Date(item.deadline);
+  if (isNaN(dl)) return '';
+  const now = new Date();
+  const days = Math.round((dl - now) / 86400000);
+  let cls, label;
+  if (days < 0)      { cls = 'deadline-overdue'; label = Math.abs(days) + 'd overdue'; }
+  else if (days <= 3){ cls = 'deadline-soon';    label = days === 0 ? 'due today' : 'due in ' + days + 'd'; }
+  else               { cls = 'deadline-ok';      label = 'due ' + dl.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+  return `<span class="deadline-tag ${cls}">${label}</span>`;
 }
 
 function subtasksHTML(item) {
@@ -1097,6 +1136,8 @@ function itemHTML(i) {
         </select>
       </div>
     </div>
+    <div class="edit-label">Deadline <span style="font-weight:400;text-transform:none;font-size:11px">(optional)</span></div>
+    <input class="edit-field" type="date" id="edit-deadline-${i.id}" value="${i.deadline || ''}" style="margin-bottom:8px" />
     <div class="edit-label">Priority</div>
     <div class="pri-selector" id="edit-pri-${i.id}">
       ${['0','1','2','3'].map(v => {
@@ -1124,6 +1165,7 @@ function itemHTML(i) {
         <div class="item-name ${i.cleared ? 'cleared' : ''}">${i.name}</div>
         <div class="item-meta">
           <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}" style="text-transform:none;letter-spacing:0">${i.tag === 'work' ? 'Work' : 'Personal'}</span>
+          ${deadlineHTML(i)}
           ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
         </div>
         ${(i.subtasks && i.subtasks.filter(s=>!s.done).length) ? `<div class="item-note">${i.subtasks.filter(s=>!s.done).length} subtask${i.subtasks.filter(s=>!s.done).length>1?'s':''} remaining</div>` : ''}
