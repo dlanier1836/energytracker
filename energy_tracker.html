@@ -955,6 +955,7 @@ async function saveEdit(id) {
 function onSearch() {
   searchQuery = document.getElementById('search-input').value.trim().toLowerCase();
   render();
+  renderOutreach();
 }
 
 function togglePill(pill) {
@@ -1429,7 +1430,8 @@ function normalizeOutreach(r) {
     done:     r.done === true || String(r.done).toUpperCase() === 'TRUE',
     archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
     added:    (r.added || '').slice(0,10),
-    lastPinged: r.lastPinged || '',
+    lastPinged:   r.lastPinged   || '',
+    snoozedUntil: r.snoozedUntil || '',
   };
 }
 
@@ -1539,36 +1541,59 @@ async function pingOutreach(id, e) {
   e.stopPropagation();
   const o = outreachItems.find(x => x.id === id);
   if (!o) return;
-
-  // Replace the ping button with an inline date input
   const btn = e.target.closest('.ping-btn');
   if (!btn) return;
-  const now = new Date();
-  const localNow = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
-  const localToday = localNow.slice(0,10);
-  const input = document.createElement('input');
-  input.type = 'datetime-local';
-  input.className = 'ping-date-input';
-  input.style.width = '160px';
-  input.value = localNow;
-  input.max = localNow;
-  btn.replaceWith(input);
-  input.focus();
 
-  async function confirmPing() {
-    const val = input.value;
-    if (val) {
-      o.lastPinged = new Date(val).toISOString();
-      await outreachPost({ action: 'updateOutreach', item: o });
-    }
-    renderOutreach();
-  }
-  input.addEventListener('change', confirmPing);
-  input.addEventListener('blur', () => { renderOutreach(); });
-  input.addEventListener('keydown', ev => {
-    if (ev.key === 'Enter') { ev.preventDefault(); confirmPing(); }
-    if (ev.key === 'Escape') { renderOutreach(); }
+  // Show "Just now" + "Pick date" options
+  const wrap = document.createElement('span');
+  wrap.style.cssText = 'display:inline-flex;gap:4px;align-items:center';
+  const nowBtn = document.createElement('button');
+  nowBtn.className = 'ping-btn';
+  nowBtn.style.cssText = 'background:#3A9E6C;color:#fff;border-color:#3A9E6C';
+  nowBtn.textContent = '✓ Just now';
+  const dateBtn = document.createElement('button');
+  dateBtn.className = 'ping-btn';
+  dateBtn.textContent = 'Pick date';
+  wrap.appendChild(nowBtn);
+  wrap.appendChild(dateBtn);
+  btn.replaceWith(wrap);
+
+  // Just now
+  nowBtn.addEventListener('click', async function(ev) {
     ev.stopPropagation();
+    o.lastPinged = new Date().toISOString();
+    await outreachPost({ action: 'updateOutreach', item: o });
+    renderOutreach();
+  });
+
+  // Pick date — replace with datetime input
+  dateBtn.addEventListener('click', function(ev) {
+    ev.stopPropagation();
+    const now = new Date();
+    const localNow = new Date(now.getTime() - now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+    const input = document.createElement('input');
+    input.type = 'datetime-local';
+    input.className = 'ping-date-input';
+    input.style.width = '160px';
+    input.value = localNow;
+    input.max = localNow;
+    wrap.replaceWith(input);
+    input.focus();
+    async function confirmPing() {
+      const val = input.value;
+      if (val) {
+        o.lastPinged = new Date(val).toISOString();
+        await outreachPost({ action: 'updateOutreach', item: o });
+      }
+      renderOutreach();
+    }
+    input.addEventListener('change', confirmPing);
+    input.addEventListener('blur', () => { renderOutreach(); });
+    input.addEventListener('keydown', ev2 => {
+      if (ev2.key === 'Enter') { ev2.preventDefault(); confirmPing(); }
+      if (ev2.key === 'Escape') { renderOutreach(); }
+      ev2.stopPropagation();
+    });
   });
 }
 
@@ -1639,6 +1664,48 @@ async function archiveOutreach() {
   }
 }
 
+async function snoozeOutreach(id, e) {
+  e.stopPropagation();
+  const o = outreachItems.find(x => x.id === id);
+  if (!o) return;
+  const btn = e.target.closest('.snooze-btn');
+  if (!btn) return;
+
+  // If already snoozed, clear it
+  if (o.snoozedUntil && new Date(o.snoozedUntil) > new Date()) {
+    o.snoozedUntil = '';
+    await outreachPost({ action: 'updateOutreach', item: o });
+    renderOutreach();
+    return;
+  }
+
+  // Show date picker
+  const today = new Date().toISOString().slice(0,10);
+  const input = document.createElement('input');
+  input.type = 'date';
+  input.className = 'ping-date-input';
+  input.style.width = '120px';
+  input.min = today;
+  btn.replaceWith(input);
+  input.focus();
+
+  async function confirmSnooze() {
+    const val = input.value;
+    if (val) {
+      o.snoozedUntil = val;
+      await outreachPost({ action: 'updateOutreach', item: o });
+    }
+    renderOutreach();
+  }
+  input.addEventListener('change', confirmSnooze);
+  input.addEventListener('blur', () => { renderOutreach(); });
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); confirmSnooze(); }
+    if (ev.key === 'Escape') { renderOutreach(); }
+    ev.stopPropagation();
+  });
+}
+
 function editOutreachName(id, e) {
   e.stopPropagation();
   const o = outreachItems.find(x => x.id === id);
@@ -1670,9 +1737,14 @@ function renderOutreach() {
   const done   = outreachItems.filter(o => o.done);
   // In Today view, only show starred outreach in the panel
   const todayActive = activePills.has('starred');
+  const nowTs = new Date();
   const vis = outreachItems.filter(o => {
     if (todayActive && !o.done && !o.starred) return false;
     if (outreachTypeFilter !== 'all' && o.type !== outreachTypeFilter) return false;
+    // Hide snoozed contacts (unless searching)
+    if (o.snoozedUntil && !searchQuery && new Date(o.snoozedUntil) > nowTs) return false;
+    // Search filter
+    if (searchQuery && !o.name.toLowerCase().includes(searchQuery)) return false;
     return true;
   });
 
@@ -1715,8 +1787,10 @@ function renderOutreach() {
       <div class="outreach-name-wrap" style="flex:1;min-width:0">
         <span class="outreach-name ${o.done ? 'done' : ''}" id="oname-${o.id}" onclick="editOutreachName(${o.id}, event)" title="Tap to edit">${o.name}</span>
         ${o.lastPinged ? `<span class="ping-ago" onclick="setPingDate(${o.id}, event)" title="Tap to change date" style="display:block;margin-top:1px">${formatPingAgo(o.lastPinged)}</span>` : ''}
+        ${o.snoozedUntil && new Date(o.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5;display:block;margin-top:1px">💤 until ${new Date(o.snoozedUntil).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
       </div>
       <button class="ping-btn" onclick="pingOutreach(${o.id}, event)" title="Log a ping">ping</button>
+      <button class="snooze-btn" onclick="snoozeOutreach(${o.id}, event)" title="Snooze contact">💤</button>
       ${priBadge}
       <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
       <div class="outreach-pri-btns">
