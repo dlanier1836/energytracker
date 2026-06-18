@@ -260,7 +260,7 @@
   .item-name.cleared { text-decoration: line-through; color: var(--text3); }
   .item-meta { display: flex; align-items: center; gap: 5px; margin-top: 3px; flex-wrap: wrap; }
   .item-note { font-size: 12px; color: var(--text2); margin-top: 4px; }
-  .subtask-pips { display: flex; gap: 3px; margin-top: 5px; flex-wrap: wrap; }
+  .subtask-pips { display: flex; align-items: center; gap: 3px; margin-top: 3px; flex-wrap: wrap; line-height: 1; }
   .pip { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--border2); flex-shrink: 0; }
   .pip.done { background: var(--text3); border-color: var(--text3); }
   .pip.open { background: none; }
@@ -272,7 +272,7 @@
   html.dark .deadline-soon   { background: transparent; color: #fbbf24; border: 1px solid #fbbf24; }
   html.dark .deadline-overdue { background: transparent; color: #f87171; border: 1px solid #f87171; box-shadow: 0 0 4px #f8717144; }
   /* Subtasks */
-  .subtask-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+  .subtask-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 4px 6px; background: var(--bg); }
   .subtask-row { display: flex; align-items: center; gap: 6px; }
   .subtask-chk { width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; flex-shrink: 0; background: var(--bg); }
   .subtask-chk.done { background: var(--text2); border-color: var(--text2); color: var(--bg); }
@@ -1790,11 +1790,8 @@ function remissionPanelHTML() {
   const inRemission = items.filter(i => i.remission && !i.archived);
   if (!inRemission.length || offClock) return '';
   const isCollapsed = remissionCollapsed;
-  const rows = inRemission.map(i => `
-    <div class="outreach-row">
-      <span style="flex:1;font-size:13px;color:var(--text2)">${i.name}</span>
-      <button class="remission-restore-btn" onclick="restoreFromRemission(${i.id})">↑ Restore</button>
-    </div>`).join('');
+  // Render full item cards so they're interactive
+  const rows = inRemission.map(i => itemHTML(i)).join('');
   return `<div class="remission-panel ${isCollapsed ? 'collapsed' : ''}" id="remission-panel-inline">
     <div class="remission-hdr" onclick="toggleRemission()">
       <div class="remission-hdr-title">
@@ -1804,7 +1801,7 @@ function remissionPanelHTML() {
       </div>
       <i class="ti ti-chevron-down remission-chevron" aria-hidden="true"></i>
     </div>
-    <div class="remission-body">${rows}</div>
+    <div class="remission-body" style="padding:6px 8px 8px">${rows}</div>
   </div>`;
 }
 
@@ -2055,7 +2052,7 @@ async function setEstimate(id, val) {
 
 function updateLoadCounter() {
   const starred = items.filter(i => i.starred && !i.cleared);
-  const totalMins = starred.reduce((s, i) => s + (i.estimate || 0), 0);
+  const totalMins = starred.reduce((s, i) => s + (i.estimate || 30), 0);
   const el = document.getElementById('load-counter');
   if (!el) return;
   if (totalMins === 0) { el.style.display = 'none'; return; }
