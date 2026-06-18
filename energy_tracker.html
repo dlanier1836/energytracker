@@ -397,7 +397,7 @@
   .star-toggle-btn.starred-on { background: #f59e0b; border-color: #f59e0b; color: #fff; }
 
   /* Risks in Remission panel */
-  .remission-panel { border-radius: var(--radius-lg); border: 0.5px solid #3A9E6C; margin-bottom: 6px; overflow: hidden; background: var(--bg); }
+  .remission-panel { border-radius: var(--radius-lg); border: 1.5px solid #3A9E6C; margin-bottom: 6px; overflow: hidden; background: var(--bg); }
   .remission-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #F0FBF5; border-bottom: 0.5px solid #C3EDD6; cursor: pointer; user-select: none; }
   html.dark .remission-hdr { background: #122212; border-color: #1e4a30; }
   .remission-hdr-title { font-size: 12px; font-weight: 600; color: #1E6B46; flex: 1; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .04em; }
@@ -670,7 +670,7 @@
     <span class="pill" data-pill="personal" onclick="togglePill('personal')">Personal</span>
     <span class="pill" data-pill="prioritized" onclick="togglePill('prioritized')">!! Prioritized</span>
     <span class="pill starred-pill" data-pill="starred" onclick="togglePill('starred')">★ Today</span>
-    <span class="pill" data-pill="revenue" onclick="togglePill('revenue')" style="color:#3A9E6C;border-color:#3A9E6C">$ Revenue</span>
+    <span class="pill" data-pill="revenue" onclick="togglePill('revenue')" id="revenue-pill" style="color:#3A9E6C;border-color:#3A9E6C">$ Revenue</span>
     <button class="archive-all-btn" id="archive-all-btn" onclick="archiveAllCleared()" style="display:none">↓ Archive all cleared</button>
   </div>
 
@@ -785,6 +785,8 @@ function applyClockMode() {
   const tagEl = document.getElementById('f-tag');
   if (tagEl) tagEl.value = offClock ? 'personal' : 'work';
   document.getElementById('clock-btn').classList.toggle('off-clock', offClock);
+  const revPill = document.getElementById('revenue-pill');
+  if (revPill) revPill.style.display = offClock ? 'none' : '';
   // Show/hide outreach vs errands panel
   const outreachPanel = document.getElementById('outreach-panel');
   const errandsPanel  = document.getElementById('errands-panel');
