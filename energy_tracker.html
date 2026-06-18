@@ -774,8 +774,6 @@ function toggleTodayHeader() {
   }
   updateFilterUI();
   updateLoadCounter();
-  renderRemission();
-  renderDelegated();
   render();
   renderOutreach();
   document.getElementById('today-hdr-btn').classList.toggle('active', activePills.has('starred'));
@@ -1239,6 +1237,9 @@ function render() {
 
   const combined = html;
   listEl.innerHTML = combined || '<div class="empty">Nothing here</div>';
+  // Inject delegated panel after DOM is written
+  renderDelegated();
+  renderRemission();
 }
 
 function deadlineHTML(item) {
@@ -1381,8 +1382,8 @@ function itemHTML(i) {
         </div>
         ${(i.subtasks && i.subtasks.length) ? `<div class="subtask-pips"><span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-right:4px">subtasks</span>${i.subtasks.map(s => `<div class="pip ${s.done ? 'done' : 'open'}" title="${s.name}"></div>`).join('')}</div>` : ''}
       </div>
-      ${priBadge}
       ${i.revenue ? '<span class="rev-badge" title="Revenue item">$</span>' : ''}
+      ${priBadge}
       ${starBtn}
       <select class="est-select" onclick="event.stopPropagation()" onchange="setEstimate(${i.id}, this.value)" title="Time estimate">
         <option value="0"   ${i.estimate===0 ?'selected':''}>–</option>
