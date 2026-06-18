@@ -449,23 +449,24 @@
     .outreach-add select { flex: 1; }
     .outreach-add button { flex: 1; }
     .outreach-type-toggle { display: none; }
-    /* Two-line outreach rows on mobile — name line + controls line */
-    .outreach-row { display: flex !important; flex-wrap: wrap !important; padding: 8px 6px; gap: 4px; align-items: center; }
-    .outreach-row .outreach-chk      { flex: 0 0 auto; }
-    .outreach-row .e-dot             { flex: 0 0 auto; }
-    .outreach-row .outreach-icon     { flex: 0 0 auto; }
-    .outreach-row .outreach-name-wrap { flex: 1 1 200px; min-width: 200px; max-width: calc(100% - 52px); }
+    /* Two-line outreach rows on mobile */
+    .outreach-row { display: flex !important; flex-wrap: wrap !important; padding: 8px 6px; gap: 4px 6px; align-items: center; }
+    /* Line 1: chk + dot + icon take auto width, name-wrap fills rest then forces break */
+    .outreach-row .outreach-chk      { flex: 0 0 auto; order: 1; }
+    .outreach-row .e-dot             { flex: 0 0 auto; order: 1; }
+    .outreach-row .outreach-icon     { flex: 0 0 auto; order: 1; }
+    .outreach-row .outreach-name-wrap { flex: 1 1 calc(100% - 60px); order: 1; min-width: 0; max-width: calc(100% - 60px); }
     .outreach-row .outreach-name     { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-    /* Force a line break before controls */
-    .outreach-row .ping-btn          { flex: 0 0 auto; margin-left: auto; }
-    .outreach-row .snooze-btn,
+    /* Full-width invisible break forces next items to line 2 */
+    .outreach-row .outreach-name-wrap::after { content: ''; flex: 0 0 100vw; height: 0; }
+    /* Line 2: all controls */
+    .outreach-row .ping-btn          { flex: 0 0 auto; order: 2; }
+    .outreach-row .snooze-btn        { flex: 0 0 auto; order: 2; }
     .outreach-row .outreach-pri-badge,
-    .outreach-row span[style*="min-width:22px"],
-    .outreach-row .outreach-star,
-    .outreach-row .outreach-pri-btns,
-    .outreach-row .outreach-del      { flex: 0 0 auto; }
-    /* Invisible spacer that forces controls to next line */
-    .outreach-row .outreach-name-wrap::after { content: ''; display: block; width: 9999px; height: 0; }
+    .outreach-row span[style*="min-width:22px"] { flex: 0 0 auto; order: 2; }
+    .outreach-row .outreach-star     { flex: 0 0 auto; order: 2; }
+    .outreach-row .outreach-pri-btns { flex: 0 0 auto; order: 2; }
+    .outreach-row .outreach-del      { flex: 0 0 auto; order: 2; margin-left: auto; }
     /* Two-line task items on mobile */
     .item-row { flex-wrap: wrap; gap: 4px; padding: 10px 10px 8px 16px; }
     .item-row .chk    { order: 0; align-self: flex-start; margin-top: 2px; }
