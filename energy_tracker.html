@@ -71,6 +71,7 @@
   html.dark .clock-btn i, html.dark .clock-btn { color: var(--text) !important; }
   html.dark .clock-btn.off-clock { background: #1a3a2a !important; }
   html.dark .clock-btn.off-clock i { filter: brightness(1.8) saturate(0.8); }
+  html.dark input[type=date]::-webkit-calendar-picker-indicator { filter: invert(1); }
   @media (prefers-color-scheme: dark) {
     html:not(.light):not(.dark) .clock-btn i { color: var(--text) !important; }
     html:not(.light):not(.dark) .clock-btn.off-clock { background: #1a3a2a !important; }
@@ -259,6 +260,10 @@
   .item-name.cleared { text-decoration: line-through; color: var(--text3); }
   .item-meta { display: flex; align-items: center; gap: 5px; margin-top: 3px; flex-wrap: wrap; }
   .item-note { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  .subtask-pips { display: flex; gap: 3px; margin-top: 5px; flex-wrap: wrap; }
+  .pip { width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--border2); flex-shrink: 0; }
+  .pip.done { background: var(--text3); border-color: var(--text3); }
+  .pip.open { background: none; }
   .deadline-tag { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
   .deadline-ok       { background: #E0F5EC; color: #1E6B46; }
   .deadline-soon     { background: #FEF3E2; color: #7A4D10; }
@@ -1116,9 +1121,17 @@ function itemHTML(i) {
   const starToggleLabel = i.starred ? '★ Starred — doing today' : '☆ Star — mark for today';
 
   const editPanel = `<div class="item-edit">
-    <div class="edit-label">Name</div>
-    <input class="edit-field" id="edit-name-${i.id}" value="${i.name.replace(/"/g,'&quot;')}" />
     <div class="edit-row">
+      <div style="flex:2">
+        <div class="edit-label">Name</div>
+        <input class="edit-field" id="edit-name-${i.id}" value="${i.name.replace(/"/g,'&quot;')}" style="margin-bottom:0" />
+      </div>
+      <div>
+        <div class="edit-label">Deadline <span style="font-weight:400;text-transform:none;font-size:11px">(optional)</span></div>
+        <input class="edit-field" type="date" id="edit-deadline-${i.id}" value="${i.deadline || ''}" style="margin-bottom:0" />
+      </div>
+    </div>
+    <div class="edit-row" style="margin-top:8px">
       <div>
         <div class="edit-label">Category</div>
         <select class="edit-field" id="edit-cat-${i.id}" style="margin-bottom:0">
@@ -1136,9 +1149,7 @@ function itemHTML(i) {
         </select>
       </div>
     </div>
-    <div class="edit-label">Deadline <span style="font-weight:400;text-transform:none;font-size:11px">(optional)</span></div>
-    <input class="edit-field" type="date" id="edit-deadline-${i.id}" value="${i.deadline || ''}" style="margin-bottom:8px" />
-    <div class="edit-label">Priority</div>
+    <div class="edit-label" style="margin-top:8px">Priority</div>
     <div class="pri-selector" id="edit-pri-${i.id}">
       ${['0','1','2','3'].map(v => {
         const sel = v === pri ? 'selected ' + PRI[v].selCls : '';
@@ -1168,7 +1179,7 @@ function itemHTML(i) {
           ${deadlineHTML(i)}
           ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
         </div>
-        ${(i.subtasks && i.subtasks.filter(s=>!s.done).length) ? `<div class="item-note">${i.subtasks.filter(s=>!s.done).length} subtask${i.subtasks.filter(s=>!s.done).length>1?'s':''} remaining</div>` : ''}
+        ${(i.subtasks && i.subtasks.length) ? `<div class="subtask-pips">${i.subtasks.map(s => `<div class="pip ${s.done ? 'done' : 'open'}" title="${s.name}"></div>`).join('')}</div>` : ''}
       </div>
       ${priBadge}
       ${starBtn}
