@@ -1112,14 +1112,14 @@ function visible() {
     const pers = activePills.has('personal');
     const pri  = activePills.has('prioritized');
     const star = activePills.has('starred');
+    const rev  = activePills.has('revenue');
 
-    let pass = all;
+    let pass = all || rev; // revenue alone shows all items (filtered above by revenue flag)
     if (!pass && (work || pers)) {
       if (work && i.tag === 'work')     pass = true;
       if (pers && i.tag === 'personal') pass = true;
     }
     if (!pass && !work && !pers && (pri || star)) pass = true;
-    if (work || pers) pass = pass; // already filtered
 
     // Secondary filters
     if (pri  && !(parseInt(i.pri || '2') < 2)) return false;
@@ -1256,7 +1256,7 @@ function subtasksHTML(item) {
       <div class="subtask-chk ${s.done ? 'done' : ''}" onclick="toggleSubtask(${item.id}, ${s.id})">
         ${s.done ? '<i class="ti ti-check"></i>' : ''}
       </div>
-      <span class="subtask-name ${s.done ? 'done' : ''}">${s.name}</span>
+      <span class="subtask-name ${s.done ? 'done' : ''}" id="stask-${item.id}-${s.id}" onclick="editSubtaskName(${item.id}, ${s.id})" title="Tap to edit" style="cursor:text">${s.name}</span>
       <button class="subtask-move" onclick="moveSubtask(${item.id}, ${s.id},'up')" title="Move up">↑</button>
       <button class="subtask-move" onclick="moveSubtask(${item.id}, ${s.id},'down')" title="Move down">↓</button>
       <button class="subtask-del" onclick="deleteSubtask(${item.id}, ${s.id})"><i class="ti ti-x"></i></button>
@@ -1921,7 +1921,7 @@ function renderOutreach() {
   }
 
   // Pagination — show 15 at a time
-  const PAGE_SIZE = 15;
+  const PAGE_SIZE = 10;
   if (typeof window._outreachPage === 'undefined') window._outreachPage = 0;
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
   const page = Math.min(window._outreachPage, totalPages - 1);
@@ -2374,6 +2374,33 @@ function deleteSubtask(itemId, subId) {
   expandedId = itemId;
   render();
   apiPost({ action: 'update', item });
+}
+
+function editSubtaskName(itemId, subId) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  const sub = item.subtasks.find(s => s.id === subId);
+  if (!sub || sub.done) return;
+  const span = document.getElementById('stask-' + itemId + '-' + subId);
+  if (!span) return;
+  const input = document.createElement('input');
+  input.style.cssText = 'font-size:13px;flex:1;padding:1px 6px;border-radius:4px;border:0.5px solid var(--border2);background:var(--bg2);color:var(--text);width:100%';
+  input.value = sub.name;
+  span.replaceWith(input);
+  input.focus(); input.select();
+  async function save() {
+    const val = input.value.trim();
+    if (val) sub.name = val;
+    expandedId = itemId;
+    render();
+    if (val) await apiPost({ action: 'update', item });
+  }
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+    if (ev.key === 'Escape') { expandedId = itemId; render(); }
+    ev.stopPropagation();
+  });
 }
 
 function moveSubtask(itemId, subId, dir) {
