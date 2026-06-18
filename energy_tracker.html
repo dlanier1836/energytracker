@@ -536,6 +536,13 @@
   </div>
 
 
+  <!-- Search -->
+  <div style="margin-bottom:8px;position:relative">
+    <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none" aria-hidden="true"></i>
+    <input type="text" id="search-input" placeholder="Search tasks and contacts…" oninput="onSearch()"
+      style="width:100%;padding:8px 10px 8px 32px;border-radius:var(--radius-lg);border:0.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px" />
+  </div>
+
   <!-- Outreach panel -->
   <div class="outreach-panel" id="outreach-panel">
     <div class="outreach-hdr" onclick="toggleOutreach()">
@@ -604,13 +611,6 @@
         <button class="errands-archive-btn" id="errands-archive-btn" onclick="archiveErrands()" style="display:none">Archive done</button>
       </div>
     </div>
-  </div>
-
-  <!-- Search -->
-  <div style="margin-bottom:8px;position:relative">
-    <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none" aria-hidden="true"></i>
-    <input type="text" id="search-input" placeholder="Search tasks…" oninput="onSearch()"
-      style="width:100%;padding:8px 10px 8px 32px;border-radius:var(--radius-lg);border:0.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px" />
   </div>
 
   <!-- Filters -->
@@ -1780,6 +1780,10 @@ function renderOutreach() {
     const dotCls = O_CAT_DOT[o.cat] || 'e3';
     const typeIcon = o.type === 'email' ? 'ti-mail' : o.type === 'linkedin' ? 'ti-brand-linkedin' : 'ti-phone';
     const typeTitle = o.type === 'email' ? 'Email' : o.type === 'linkedin' ? 'LinkedIn' : 'Call';
+    // Always reserve badge space for alignment — blank for normal priority
+    const priBadgeOrSpace = pb && pb.badge
+      ? `<span class="outreach-pri-badge ${pb.cls}" style="min-width:22px;text-align:center">${pb.badge}</span>`
+      : `<span style="display:inline-block;min-width:22px"></span>`;
     return `<div class="outreach-row">
       <div class="outreach-chk ${o.done ? 'done' : ''}" onclick="toggleOutreachDone(${o.id}, event)">
         ${o.done ? '<i class="ti ti-check"></i>' : ''}
@@ -1793,7 +1797,7 @@ function renderOutreach() {
       </div>
       <button class="ping-btn" onclick="pingOutreach(${o.id}, event)" title="Log a ping">ping</button>
       <button class="snooze-btn" onclick="snoozeOutreach(${o.id}, event)" title="Snooze contact">💤</button>
-      ${priBadge}
+      ${priBadgeOrSpace}
       <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
       <div class="outreach-pri-btns">
         <button class="outreach-pri-btn ${upActive}"   onclick="changeOutreachPri(${o.id},'up',event)">▲</button>
