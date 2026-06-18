@@ -341,28 +341,22 @@
   .rev-badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #E0F5EC; color: #1E6B46; flex-shrink: 0; border: 1px solid #3A9E6C; line-height: 1.4; }
   html.dark .rev-badge { background: transparent; color: #6ee7b7; border-color: #6ee7b7; box-shadow: 0 0 4px #6ee7b744; }
   /* Delegated panel */
-  .delegated-panel { border-radius: var(--radius-lg); border: 1.5px solid #6B28A0; margin-bottom: 8px; overflow: hidden; background: var(--bg); }
-  .delegated-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #F3E8FE; border-bottom: 0.5px solid #d4b8f0; cursor: pointer; user-select: none; }
-  html.dark .delegated-hdr { background: #1e1228; border-color: #3a1a5a; }
-  .delegated-hdr-title { font-size: 12px; font-weight: 600; color: #6B28A0; flex: 1; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .04em; }
-  html.dark .delegated-hdr-title { color: #c4b5fd; }
-  .delegated-count { font-size: 11px; border: 0.5px solid #6B28A0; border-radius: 20px; padding: 1px 8px; color: #6B28A0; }
-  html.dark .delegated-count { border-color: #c4b5fd; color: #c4b5fd; }
-  .delegated-chevron { font-size: 15px; color: #6B28A0; transition: transform .2s; }
-  html.dark .delegated-chevron { color: #c4b5fd; }
+  .delegated-panel { border-radius: var(--radius-lg); border: 1.5px solid #2A44A0; margin-bottom: 6px; overflow: hidden; background: var(--bg); }
+  .delegated-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #E8EFFE; border-bottom: 0.5px solid #b5c8f4; cursor: pointer; user-select: none; }
+  html.dark .delegated-hdr { background: #121a2a; border-color: #1e2a4a; }
+  .delegated-hdr-title { font-size: 12px; font-weight: 600; color: #185FA5; flex: 1; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  html.dark .delegated-hdr-title { color: #93c5fd; }
+  .delegated-count { font-size: 11px; border: 0.5px solid #2A44A0; border-radius: 20px; padding: 1px 8px; color: #2A44A0; }
+  html.dark .delegated-count { border-color: #93c5fd; color: #93c5fd; }
+  .delegated-chevron { font-size: 15px; color: #2A44A0; transition: transform .2s; }
+  html.dark .delegated-chevron { color: #93c5fd; }
   .delegated-panel.collapsed .delegated-chevron { transform: rotate(-90deg); }
   .delegated-panel.collapsed .delegated-body { display: none; }
-  .delegated-body { padding: 6px 10px 8px; }
-  .delegated-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--radius); }
-  .delegated-row:hover { background: var(--bg2); }
-  .delegated-name { flex: 1; font-size: 13px; }
-  .delegated-to { font-size: 11px; color: #6B28A0; background: #F3E8FE; border-radius: 4px; padding: 1px 6px; }
-  html.dark .delegated-to { background: #1e1228; color: #c4b5fd; }
-  .delegated-expiry { font-size: 11px; color: var(--text3); }
-  .delegated-recall { background: none; border: 0.5px solid #6B28A0; color: #6B28A0; font-size: 11px; padding: 2px 8px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
-  html.dark .delegated-recall { border-color: #c4b5fd; color: #c4b5fd; }
-  .delegated-recall:hover { background: #F3E8FE; }
-  html.dark .delegated-recall:hover { background: #1e1228; }
+  .delegated-body { padding: 6px 8px 8px; }
+  .delegated-recall { background: none; border: 0.5px solid #2A44A0; color: #2A44A0; font-size: 11px; padding: 2px 8px; border-radius: 20px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+  html.dark .delegated-recall { border-color: #93c5fd; color: #93c5fd; }
+  .delegated-recall:hover { background: #E8EFFE; }
+  html.dark .delegated-recall:hover { background: #121a2a; }
 
   /* Time estimate */
   .est-select { font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 0.5px solid var(--border); background: var(--bg2); color: var(--text2); cursor: pointer; flex-shrink: 0; }
@@ -1161,7 +1155,7 @@ function sortItems(arr) {
 // Today view: group by priority tier with section headers
 function renderTodayView(vis) {
   const PRI_LABELS = { '0':'!! Top priority', '1':'! High priority', '2':'Normal', '3':'↓ Low priority' };
-  let html = '<div id="delegated-anchor"></div>';
+  let html = '';
   ['0','1','2','3'].forEach(p => {
     const group = vis.filter(i => (i.pri||'2') === p);
     if (!group.length) return;
@@ -1218,8 +1212,6 @@ function render() {
   } else if (activePills.has('prioritized')) {
     html = renderTodayView(vis);
   } else {
-    // Inject delegated panel at top
-    html += '<div id="delegated-anchor"></div>';
     // Group by category
     CAT_ORDER.forEach(k => {
       const group = vis.filter(i => i.cat === k);
@@ -1228,9 +1220,10 @@ function render() {
         html += `<div class="section-hdr"><span class="dot ${c.dot}"></span>${c.label}</div>`;
         sortItems(group).forEach(i => { html += itemHTML(i); });
       }
-      // After Risk group, inject Risks in Remission panel
+      // After Risk group, inject Risks in Remission then Delegated panel
       if (k === '1') {
         html += remissionPanelHTML();
+        html += '<div id="delegated-anchor"></div>';
       }
     });
   }
@@ -1841,7 +1834,10 @@ async function snoozeOutreach(id, e) {
   btn.replaceWith(input);
   input.focus();
 
+  let snoozeDone = false;
   async function confirmSnooze() {
+    if (snoozeDone) return;
+    snoozeDone = true;
     const val = input.value;
     if (val) {
       o.snoozedUntil = val;
@@ -1850,10 +1846,10 @@ async function snoozeOutreach(id, e) {
     renderOutreach();
   }
   input.addEventListener('change', confirmSnooze);
-  input.addEventListener('blur', () => { renderOutreach(); });
+  input.addEventListener('blur', () => { setTimeout(confirmSnooze, 50); });
   input.addEventListener('keydown', ev => {
     if (ev.key === 'Enter') { ev.preventDefault(); confirmSnooze(); }
-    if (ev.key === 'Escape') { renderOutreach(); }
+    if (ev.key === 'Escape') { snoozeDone = true; renderOutreach(); }
     ev.stopPropagation();
   });
 }
@@ -2050,16 +2046,19 @@ function delegatedPanelHTML() {
     const expiry = i.delegationExpiry ? new Date(i.delegationExpiry) : null;
     const daysLeft = expiry ? Math.ceil((expiry - new Date()) / 86400000) : null;
     const expiryLabel = expiry
-      ? (daysLeft < 0 ? `<span class="delegated-expiry" style="color:#D94848">overdue</span>`
-       : daysLeft === 0 ? `<span class="delegated-expiry" style="color:#C47D24">due today</span>`
-       : `<span class="delegated-expiry">↩ ${daysLeft}d</span>`)
+      ? (daysLeft < 0 ? `<span style="font-size:11px;color:#D94848;font-weight:600">↩ overdue</span>`
+       : daysLeft === 0 ? `<span style="font-size:11px;color:#C47D24;font-weight:600">↩ today</span>`
+       : `<span style="font-size:11px;color:#185FA5">↩ ${expiry.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`)
       : '';
-    return `<div class="delegated-row">
-      <span class="delegated-name">${i.name}</span>
-      ${i.delegatedTo ? `<span class="delegated-to">→ ${i.delegatedTo}</span>` : ''}
-      ${expiryLabel}
-      <button class="delegated-recall" onclick="recallDelegated(${i.id})">↑ Recall</button>
-    </div>`;
+    // Render as full item card with recall button appended
+    const card = itemHTML(i);
+    // Inject delegated-to + expiry into item meta and recall button before del button
+    return card
+      .replace('</div>
+      <button class="del-btn"', 
+        `${i.delegatedTo ? `<span style="font-size:11px;color:#185FA5;margin-top:2px;display:block">→ ${i.delegatedTo} ${expiryLabel}</span>` : ''}</div>
+      <button class="delegated-recall" onclick="event.stopPropagation();recallDelegated(${i.id})">↑ Recall</button>
+      <button class="del-btn"`);
   }).join('');
 
   return `<div class="delegated-panel ${isCollapsed ? 'collapsed' : ''}" id="delegated-panel-inline" onclick="if(event.target===this||event.target.closest('.delegated-hdr'))toggleDelegated()">
