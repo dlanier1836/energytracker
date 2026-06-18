@@ -265,6 +265,10 @@
   .pip.done { background: var(--text3); border-color: var(--text3); }
   .pip.open { background: none; }
   .deadline-tag { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; }
+  .snooze-btn { background: none; border: 0.5px solid var(--border2); cursor: pointer; color: var(--text3); font-size: 11px; padding: 2px 8px; border-radius: 20px; flex-shrink: 0; white-space: nowrap; }
+  .snooze-btn:hover { color: #185FA5; border-color: #185FA5; background: #E6F1FB; }
+  .snooze-input { font-size: 11px; padding: 2px 5px; border-radius: 4px; border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); flex-shrink: 0; }
+  html.dark .snooze-input::-webkit-calendar-picker-indicator { filter: invert(1); }
   .deadline-ok       { background: #E0F5EC; color: #1E6B46; }
   .deadline-soon     { background: #FEF3E2; color: #7A4D10; }
   .deadline-overdue  { background: #FDE8E8; color: #9B2626; }
@@ -772,7 +776,8 @@ function normalize(r) {
     archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
     subtasks: (() => { try { const v = r.subtasks; if (!v || v === '' || v === '0' || v === 0) return []; if (Array.isArray(v)) return v; const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch(e) { return []; } })(),
     estimate: r.estimate ? Number(r.estimate) : 0,
-    remission: r.remission === true || String(r.remission).toUpperCase() === 'TRUE',
+    remission:    r.remission    === true || String(r.remission).toUpperCase()    === 'TRUE',
+    snoozedUntil: r.snoozedUntil || '',
   };
 }
 
@@ -845,8 +850,9 @@ async function addItem() {
     starred:   addStarred,
     archived:  false,
     subtasks:  [],
-    estimate:  30,
-    remission: false,
+    estimate:     30,
+    remission:    false,
+    snoozedUntil: '',
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
@@ -936,7 +942,8 @@ async function saveEdit(id) {
   if (!item) return;
   item.name    = document.getElementById('edit-name-' + id).value.trim() || item.name;
   item.cat      = document.getElementById('edit-cat-'  + id).value;
-  item.deadline = document.getElementById('edit-deadline-' + id).value || '';
+  item.deadline    = document.getElementById('edit-deadline-' + id).value || '';
+  item.snoozedUntil = document.getElementById('edit-snooze-' + id).value || '';
   item.tag     = document.getElementById('edit-tag-'  + id).value;
   // pri already updated in-place via selectPri
   expandedId = null;
@@ -989,8 +996,14 @@ function updateFilterUI() {
 }
 
 function visible() {
+  const now = new Date();
   return items.filter(i => {
     if (i.remission) return false;
+    // Snoozed items hidden unless searching
+    if (i.snoozedUntil && !searchQuery) {
+      const snoozeDate = new Date(i.snoozedUntil);
+      if (snoozeDate > now) return false;
+    }
     if (offClock && i.tag === 'work') return false;
     if (searchQuery && !i.name.toLowerCase().includes(searchQuery)) return false;
     if (catFilter) return i.cat === catFilter;
@@ -1213,6 +1226,11 @@ function itemHTML(i) {
       }).join('')}
     </div>
 
+    <div class="edit-label">Snooze until <span style="font-weight:400;text-transform:none;font-size:11px">(optional — hides until date, still searchable)</span></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <input class="snooze-input edit-field" type="date" id="edit-snooze-${i.id}" value="${i.snoozedUntil || ''}" style="margin-bottom:0;flex:1" />
+      ${i.snoozedUntil ? `<button class="snooze-btn" onclick="clearSnooze(${i.id})">✕ Clear snooze</button>` : ''}
+    </div>
     <div class="edit-label">Subtasks</div>
     ${subtasksHTML(i)}
     <div class="edit-actions">
@@ -1235,6 +1253,7 @@ function itemHTML(i) {
         <div class="item-meta">
           <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}" style="text-transform:none;letter-spacing:0">${i.tag === 'work' ? 'Work' : 'Personal'}</span>
           ${deadlineHTML(i)}
+          ${i.snoozedUntil && new Date(i.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5">💤 until ${new Date(i.snoozedUntil).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
           ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
         </div>
         ${(i.subtasks && i.subtasks.length) ? `<div class="subtask-pips"><span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-right:4px">subtasks</span>${i.subtasks.map(s => `<div class="pip ${s.done ? 'done' : 'open'}" title="${s.name}"></div>`).join('')}</div>` : ''}
@@ -2039,6 +2058,16 @@ function moveSubtask(itemId, subId, dir) {
   expandedId = itemId;
   render();
   apiPost({ action: 'update', item });
+}
+
+// ── Snooze ────────────────────────────────────────────────
+async function clearSnooze(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.snoozedUntil = '';
+  expandedId = id;
+  render();
+  await apiPost({ action: 'update', item });
 }
 
 // ── Time estimates ────────────────────────────────────────
