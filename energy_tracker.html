@@ -334,6 +334,13 @@
   .del-btn:hover { color: #D94848; background: #FDE8E8; }
   .cal-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 4px; border-radius: var(--radius); display: flex; align-items: center; flex-shrink: 0; }
   .cal-btn:hover { color: #185FA5; background: #E6F1FB; }
+  /* Time estimate */
+  .est-select { font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 0.5px solid var(--border); background: var(--bg2); color: var(--text2); cursor: pointer; flex-shrink: 0; }
+  .est-select:focus { outline: none; border-color: var(--border2); }
+  /* Daily load counter in header */
+  .load-counter { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 4px; margin-right: 4px; }
+  .load-counter.warn  { color: #C47D24; }
+  .load-counter.heavy { color: #D94848; }
   /* Archive all button */
   .archive-all-btn { font-size: 12px; color: var(--text3); background: none; border: 0.5px solid var(--border); padding: 5px 12px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
   .archive-all-btn:hover { color: #7A4D10; border-color: #C47D24; background: #FEF3E2; }
@@ -364,6 +371,25 @@
   .star-toggle-btn { padding: 5px 14px; border-radius: 20px; font-size: 12px; border: 1.5px solid var(--border); background: var(--bg); color: var(--text2); cursor: pointer; display: flex; align-items: center; gap: 5px; }
   .star-toggle-btn:hover { border-color: #f59e0b; color: #b45309; }
   .star-toggle-btn.starred-on { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+
+  /* Risks in Remission panel */
+  .remission-panel { border-radius: var(--radius-lg); border: 0.5px solid #D94848; margin-bottom: 1rem; overflow: hidden; background: var(--bg); }
+  .remission-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #FEF2F2; border-bottom: 0.5px solid #FACACA; cursor: pointer; user-select: none; }
+  html.dark .remission-hdr { background: #2a1212; border-color: #4a2020; }
+  .remission-hdr-title { font-size: 12px; font-weight: 600; color: #9B2626; flex: 1; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  html.dark .remission-hdr-title { color: #f87171; }
+  .remission-count { font-size: 11px; border: 0.5px solid #D94848; border-radius: 20px; padding: 1px 8px; color: #D94848; }
+  html.dark .remission-count { border-color: #f87171; color: #f87171; }
+  .remission-chevron { font-size: 15px; color: #D94848; transition: transform .2s; }
+  html.dark .remission-chevron { color: #f87171; }
+  .remission-panel.collapsed .remission-chevron { transform: rotate(-90deg); }
+  .remission-panel.collapsed .remission-body { display: none; }
+  .remission-body { padding: 6px 10px 8px; }
+  .remission-empty { font-size: 13px; color: var(--text3); text-align: center; padding: .75rem; }
+  .remission-btn { background: none; border: 0.5px solid #D94848; color: #D94848; font-size: 11px; padding: 2px 8px; border-radius: 20px; cursor: pointer; flex-shrink: 0; white-space: nowrap; }
+  .remission-btn:hover { background: #FDE8E8; }
+  html.dark .remission-btn { border-color: #f87171; color: #f87171; }
+  html.dark .remission-btn:hover { background: #2a1212; }
 
   /* Errands panel — mirrors outreach but simpler */
   .errands-panel { background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border); margin-bottom: 1.25rem; overflow: hidden; }
@@ -428,6 +454,7 @@
   <h1>
     <i class="ti ti-bolt" style="color:#C47D24"></i> Energy tracker
     <span class="h1-right" style="display:flex;align-items:center;gap:4px">
+      <span class="load-counter" id="load-counter" style="display:none"></span>
       <button class="today-hdr-btn" onclick="toggleTodayHeader()" id="today-hdr-btn" title="Toggle Today view">★</button>
       <button class="clock-btn" onclick="toggleClock()" id="clock-btn" title="Toggle on/off the clock">
         <i id="clock-icon" class="ti ti-calendar-week" aria-hidden="true"></i>
@@ -537,6 +564,19 @@
         <button class="outreach-archive-btn" id="outreach-archive-btn" onclick="archiveOutreach()" style="display:none">Archive done</button>
       </div>
     </div>
+  </div>
+
+  <!-- Risks in Remission panel -->
+  <div class="remission-panel collapsed" id="remission-panel" style="display:none">
+    <div class="remission-hdr" onclick="toggleRemission()">
+      <div class="remission-hdr-title">
+        <i class="ti ti-shield-check" style="font-size:14px" aria-hidden="true"></i>
+        Risks in Remission
+        <span class="remission-count" id="remission-count">0</span>
+      </div>
+      <i class="ti ti-chevron-down remission-chevron" aria-hidden="true"></i>
+    </div>
+    <div class="remission-body" id="remission-body"></div>
   </div>
 
   <!-- Errands panel (off the clock mode) -->
@@ -653,6 +693,9 @@ function applyThemeColors(dark) {
     root.style.setProperty('--border',  'rgba(0,0,0,0.12)');
     root.style.setProperty('--border2', 'rgba(0,0,0,0.22)');
   }
+  // Force repaint on body and key panels so background updates instantly
+  document.body.style.background = dark ? '#2e2e2b' : '#f0efe9';
+  setTimeout(() => { document.body.style.background = ''; }, 50);
 }
 function updateThemeIcon() {
   const isDark = document.documentElement.classList.contains('dark') ||
@@ -670,6 +713,8 @@ function toggleTodayHeader() {
     activePills = new Set(['starred']);
   }
   updateFilterUI();
+  updateLoadCounter();
+  renderRemission();
   render();
   renderOutreach();
   document.getElementById('today-hdr-btn').classList.toggle('active', activePills.has('starred'));
@@ -726,6 +771,8 @@ function normalize(r) {
     starred:  r.starred  === true || String(r.starred).toUpperCase()  === 'TRUE',
     archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
     subtasks: (() => { try { const v = r.subtasks; if (!v || v === '' || v === '0' || v === 0) return []; if (Array.isArray(v)) return v; const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch(e) { return []; } })(),
+    estimate: r.estimate ? Number(r.estimate) : 0,
+    remission: r.remission === true || String(r.remission).toUpperCase() === 'TRUE',
   };
 }
 
@@ -795,9 +842,11 @@ async function addItem() {
     added:    new Date().toISOString().slice(0,10),
     pri:      document.getElementById('f-pri').value,
     deadline: '',
-    starred:  addStarred,
-    archived: false,
-    subtasks: [],
+    starred:   addStarred,
+    archived:  false,
+    subtasks:  [],
+    estimate:  0,
+    remission: false,
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
@@ -941,6 +990,7 @@ function updateFilterUI() {
 
 function visible() {
   return items.filter(i => {
+    if (i.remission) return false;
     if (offClock && i.tag === 'work') return false;
     if (searchQuery && !i.name.toLowerCase().includes(searchQuery)) return false;
     if (catFilter) return i.cat === catFilter;
@@ -1016,6 +1066,7 @@ function render() {
   const todayStar = activePills.has('starred') && !catFilter;
   items.filter(i => {
     if (i.cleared) return false;
+    if (i.remission) return false;
     if (offClock && i.tag === 'work') return false;
     if (todayStar && !i.starred) return false;
     return true;
@@ -1179,12 +1230,22 @@ function itemHTML(i) {
           ${deadlineHTML(i)}
           ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
         </div>
-        ${(i.subtasks && i.subtasks.length) ? `<div class="subtask-pips">${i.subtasks.map(s => `<div class="pip ${s.done ? 'done' : 'open'}" title="${s.name}"></div>`).join('')}</div>` : ''}
+        ${(i.subtasks && i.subtasks.length) ? `<div class="subtask-pips"><span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-right:4px">subtasks</span>${i.subtasks.map(s => `<div class="pip ${s.done ? 'done' : 'open'}" title="${s.name}"></div>`).join('')}</div>` : ''}
       </div>
       ${priBadge}
       ${starBtn}
+      <select class="est-select" onclick="event.stopPropagation()" onchange="setEstimate(${i.id}, this.value)" title="Time estimate">
+        <option value="0"   ${(!i.estimate||i.estimate===0)?'selected':''}>–</option>
+        <option value="5"   ${i.estimate===5  ?'selected':''}>5m</option>
+        <option value="15"  ${i.estimate===15 ?'selected':''}>15m</option>
+        <option value="30"  ${i.estimate===30 ?'selected':''}>30m</option>
+        <option value="60"  ${i.estimate===60 ?'selected':''}>1h</option>
+        <option value="120" ${i.estimate===120?'selected':''}>2h</option>
+        <option value="240" ${i.estimate===240?'selected':''}>4h</option>
+      </select>
       ${priBtns}
       <button class="cal-btn" onclick="scheduleTask(${i.id})" title="Schedule on Google Calendar"><i class="ti ti-calendar-plus"></i></button>
+      ${i.cat === '1' && !i.remission ? `<button class="remission-btn" onclick="sendToRemission(${i.id}, event)" title="Move to Risks in Remission" style="font-size:11px;padding:2px 6px">→ Remission</button>` : ''}
       <button class="del-btn" onclick="del(${i.id}, event)" aria-label="Remove"><i class="ti ti-trash"></i></button>
     </div>
     ${editPanel}
@@ -1690,6 +1751,51 @@ function outreachItemHTML(o) {
 }
 
 
+// ── Risks in Remission ────────────────────────────────────
+let remissionCollapsed = true;
+
+async function sendToRemission(id, e) {
+  e.stopPropagation();
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.remission = true;
+  if (expandedId === id) expandedId = null;
+  render();
+  renderRemission();
+  await apiPost({ action: 'update', item });
+}
+
+async function restoreFromRemission(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.remission = false;
+  render();
+  renderRemission();
+  await apiPost({ action: 'update', item });
+}
+
+function toggleRemission() {
+  remissionCollapsed = !remissionCollapsed;
+  document.getElementById('remission-panel').classList.toggle('collapsed', remissionCollapsed);
+}
+
+function renderRemission() {
+  const inRemission = items.filter(i => i.remission && !i.archived);
+  const panel = document.getElementById('remission-panel');
+  if (!panel) return;
+  panel.style.display = inRemission.length > 0 && !offClock ? 'block' : 'none';
+  document.getElementById('remission-count').textContent = inRemission.length;
+  if (!inRemission.length) {
+    document.getElementById('remission-body').innerHTML = '<div class="remission-empty">No risks in remission</div>';
+    return;
+  }
+  document.getElementById('remission-body').innerHTML = inRemission.map(i => `
+    <div class="outreach-row" style="border-bottom: 0.5px solid var(--border)">
+      <span style="flex:1;font-size:13px;color:var(--text2)">${i.name}</span>
+      <button class="remission-btn" onclick="restoreFromRemission(${i.id})">↑ Restore</button>
+    </div>`).join('');
+}
+
 // ── Errands ──────────────────────────────────────────────
 let errandsItems = [];
 let errandsCollapsed = false;
@@ -1914,6 +2020,28 @@ function moveSubtask(itemId, subId, dir) {
   apiPost({ action: 'update', item });
 }
 
+// ── Time estimates ────────────────────────────────────────
+async function setEstimate(id, val) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.estimate = parseInt(val) || 0;
+  updateLoadCounter();
+  await apiPost({ action: 'update', item });
+}
+
+function updateLoadCounter() {
+  const starred = items.filter(i => i.starred && !i.cleared);
+  const totalMins = starred.reduce((s, i) => s + (i.estimate || 0), 0);
+  const el = document.getElementById('load-counter');
+  if (!el) return;
+  if (totalMins === 0) { el.style.display = 'none'; return; }
+  const h = Math.floor(totalMins / 60), m = totalMins % 60;
+  const label = (h > 0 ? h + 'h ' : '') + (m > 0 ? m + 'm' : '');
+  el.textContent = '⏱ ' + label;
+  el.style.display = 'flex';
+  el.className = 'load-counter' + (totalMins > 360 ? ' heavy' : totalMins > 240 ? ' warn' : '');
+}
+
 // ── Schedule to calendar ──────────────────────────────────
 function scheduleTask(id) {
   const item = items.find(i => i.id === id);
@@ -1971,6 +2099,7 @@ loadItems();
 loadOutreach();
 loadErrands();
 loadFocusFromSheet();
+renderRemission();
 </script>
 </body>
 </html>
