@@ -452,7 +452,7 @@
     /* Two-line outreach rows on mobile */
     .outreach-row { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 6px; }
     .outreach-row-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
-    .outreach-row-bottom { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-left: 52px; }
+    .outreach-row-bottom { display: flex; align-items: center; justify-content: flex-start; gap: 6px; flex-wrap: wrap; padding-left: 0; }
     /* Two-line task items on mobile */
     .item-row { flex-wrap: wrap; gap: 4px; padding: 10px 10px 8px 16px; }
     .item-row .chk    { order: 0; align-self: flex-start; margin-top: 2px; }
@@ -817,6 +817,7 @@ async function loadItems() {
     if (data.error) throw new Error(data.error);
     const arr = Array.isArray(data) ? data : (data.items || []);
     items = arr.map(normalize).filter(i => !i.archived);
+    autoStarUnsnoozed();
     localStorage.setItem('itemsCache', JSON.stringify(items));
     setSyncStatus('Synced', 'sync-ok');
     render();
@@ -1472,6 +1473,7 @@ async function loadOutreach() {
     const data = await res.json();
     const arr = Array.isArray(data) ? data : (data.items || []);
     outreachItems = arr.map(normalizeOutreach).filter(o => !o.archived);
+    autoStarUnsnoozedOutreach();
     localStorage.setItem('outreachCache', JSON.stringify(outreachItems));
     renderOutreach();
     render(); // ensure Today view picks up starred outreach on load
@@ -1695,6 +1697,17 @@ async function archiveOutreach() {
   }
 }
 
+function autoStarUnsnoozedOutreach() {
+  const now = new Date();
+  outreachItems.forEach(o => {
+    if (o.snoozedUntil && new Date(o.snoozedUntil) <= now) {
+      o.snoozedUntil = '';
+      o.starred = true;
+      outreachPost({ action: 'updateOutreach', item: o });
+    }
+  });
+}
+
 async function snoozeOutreach(id, e) {
   e.stopPropagation();
   const o = outreachItems.find(x => x.id === id);
@@ -1779,9 +1792,11 @@ function renderOutreach() {
     return true;
   });
 
-  // Count badge — always show full active count, not filtered
-  const activeCount = active.filter(o => outreachTypeFilter === 'all' || o.type === outreachTypeFilter).length;
-  document.getElementById('outreach-count').textContent = activeCount + ' remaining';
+  // Count badge — reflects current filter (Today or type)
+  const todayCount = activePills.has('starred')
+    ? vis.filter(o => !o.done).length
+    : active.filter(o => outreachTypeFilter === 'all' || o.type === outreachTypeFilter).length;
+  document.getElementById('outreach-count').textContent = todayCount + ' remaining';
 
   // Done footer
   const doneCount = done.filter(o => outreachTypeFilter === 'all' || o.type === outreachTypeFilter).length;
@@ -2171,6 +2186,22 @@ function moveSubtask(itemId, subId, dir) {
   expandedId = itemId;
   render();
   apiPost({ action: 'update', item });
+}
+
+// ── Auto-star on unsnooze ─────────────────────────────────
+function autoStarUnsnoozed() {
+  const now = new Date();
+  let changed = false;
+  items.forEach(i => {
+    if (i.snoozedUntil && new Date(i.snoozedUntil) <= now) {
+      // Snooze has expired — clear it and star the item
+      i.snoozedUntil = '';
+      i.starred = true;
+      changed = true;
+      apiPost({ action: 'update', item: i });
+    }
+  });
+  return changed;
 }
 
 // ── Snooze ────────────────────────────────────────────────
