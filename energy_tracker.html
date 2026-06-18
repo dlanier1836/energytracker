@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Energy Tracker</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='4' fill='white'/><path fill='%23F97316' d='M11 21h-1l1-7H7a1 1 0 0 1-.78-1.63l7-10 .78.63L8.22 13H13a1 1 0 0 1 .78 1.63l-3 4.3L11 21z'/></svg>">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='4' fill='white'/><path fill='none' stroke='%23F97316' stroke-width='1.8' stroke-linecap='round' d='M12 4a8 8 0 1 0 7.4 5'/><path fill='%23F97316' d='M19 3.5l1.5 3.5-3.5-.5z'/><path fill='%23F97316' d='M11 17h-1l1-5.5H8a.75.75 0 0 1-.6-1.2l5.5-7 .6.5L10 13h3a.75.75 0 0 1 .6 1.2l-2.3 3.3L11 17z'/></svg>">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
   :root {
@@ -1294,7 +1294,8 @@ function startFocusSession() {
 }
 function endFocusSession() {
   if (sessionStartSecs === null) return;
-  const elapsed = Math.round((sessionStartSecs - pomoSecs) / 60);
+  const elapsedSecs = sessionStartSecs - pomoSecs;
+  const elapsed = elapsedSecs >= 30 ? Math.max(1, Math.round(elapsedSecs / 60)) : 0; // save if at least 30 seconds
   if (elapsed > 0) {
     const session = { id: Date.now(), mins: elapsed, duration: pomoDuration };
     const sessions = getSessions();
@@ -1388,6 +1389,7 @@ function pomoToggle() {
 }
 function pomoReset() {
   clearInterval(pomoInterval);
+  if (pomoRunning) endFocusSession(); // save any accumulated time before reset
   pomoRunning = false;
   pomoSecs = pomoDuration * 60;
   document.getElementById('pomo-start').textContent = 'Start';
