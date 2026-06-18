@@ -828,17 +828,17 @@ function normalize(r) {
     cleared:  r.cleared === true || String(r.cleared).toUpperCase() === 'TRUE',
     added:    addedClean,
     pri:      String(r.pri != null && r.pri !== '' ? r.pri : '2'),
-    deadline: r.deadline || '',
+    deadline: /\d{4}-\d{2}-\d{2}/.test(r.deadline || '') ? r.deadline.slice(0,10) : '',
     starred:  r.starred  === true || String(r.starred).toUpperCase()  === 'TRUE',
     archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
     subtasks: (() => { try { const v = r.subtasks; if (!v || v === '' || v === '0' || v === 0) return []; if (Array.isArray(v)) return v; const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch(e) { return []; } })(),
     estimate: r.estimate ? Number(r.estimate) : 0,
     remission:    r.remission    === true || String(r.remission).toUpperCase()    === 'TRUE',
-    snoozedUntil: r.snoozedUntil || '',
+    snoozedUntil: /\d{4}-\d{2}-\d{2}/.test(r.snoozedUntil || '') ? r.snoozedUntil.slice(0,10) : '',
     revenue:      r.revenue      === true || String(r.revenue).toUpperCase()      === 'TRUE',
     delegated:    r.delegated    === true || String(r.delegated).toUpperCase()    === 'TRUE',
     delegatedTo:  r.delegatedTo  || '',
-    delegationExpiry: r.delegationExpiry ? String(r.delegationExpiry).slice(0,10) : '',
+    delegationExpiry: /\d{4}-\d{2}-\d{2}/.test(r.delegationExpiry || '') ? String(r.delegationExpiry).slice(0,10) : '',
   };
 }
 
@@ -1566,7 +1566,7 @@ function normalizeOutreach(r) {
     archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
     added:    (r.added || '').slice(0,10),
     lastPinged:   r.lastPinged   || '',
-    snoozedUntil: r.snoozedUntil || '',
+    snoozedUntil: /\d{4}-\d{2}-\d{2}/.test(r.snoozedUntil || '') ? r.snoozedUntil.slice(0,10) : '',
   };
 }
 
