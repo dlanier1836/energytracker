@@ -2055,11 +2055,9 @@ function delegatedPanelHTML() {
       ? '<span style="font-size:11px;color:#185FA5;margin-top:2px;display:block">→ ' + i.delegatedTo + ' ' + expiryLabel + '</span>'
       : '';
     const recallBtn = '<button class="delegated-recall" onclick="event.stopPropagation();recallDelegated(' + i.id + ')">↑ Recall</button>';
-    return itemHTML(i)
-      .replace('</div>
-      <button class="del-btn"', delegateInfo + '</div>
-      ' + recallBtn + '
-      <button class="del-btn"');
+    const SEP = '</div>\n      <button class="del-btn"';
+    const REP = delegateInfo + '</div>\n      ' + recallBtn + '\n      <button class="del-btn"';
+    return itemHTML(i).replace(SEP, REP);
   }).join('');
 
   return `<div class="delegated-panel ${isCollapsed ? 'collapsed' : ''}" id="delegated-panel-inline" onclick="if(event.target===this||event.target.closest('.delegated-hdr'))toggleDelegated()">
