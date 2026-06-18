@@ -450,23 +450,9 @@
     .outreach-add button { flex: 1; }
     .outreach-type-toggle { display: none; }
     /* Two-line outreach rows on mobile */
-    .outreach-row { display: flex !important; flex-wrap: wrap !important; padding: 8px 6px; gap: 4px 6px; align-items: center; }
-    /* Line 1: chk + dot + icon take auto width, name-wrap fills rest then forces break */
-    .outreach-row .outreach-chk      { flex: 0 0 auto; order: 1; }
-    .outreach-row .e-dot             { flex: 0 0 auto; order: 1; }
-    .outreach-row .outreach-icon     { flex: 0 0 auto; order: 1; }
-    .outreach-row .outreach-name-wrap { flex: 1 1 calc(100% - 60px); order: 1; min-width: 0; max-width: calc(100% - 60px); }
-    .outreach-row .outreach-name     { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
-    /* Full-width invisible break forces next items to line 2 */
-    .outreach-row .outreach-name-wrap::after { content: ''; flex: 0 0 100vw; height: 0; }
-    /* Line 2: all controls */
-    .outreach-row .ping-btn          { flex: 0 0 auto; order: 2; }
-    .outreach-row .snooze-btn        { flex: 0 0 auto; order: 2; }
-    .outreach-row .outreach-pri-badge,
-    .outreach-row span[style*="min-width:22px"] { flex: 0 0 auto; order: 2; }
-    .outreach-row .outreach-star     { flex: 0 0 auto; order: 2; }
-    .outreach-row .outreach-pri-btns { flex: 0 0 auto; order: 2; }
-    .outreach-row .outreach-del      { flex: 0 0 auto; order: 2; margin-left: auto; }
+    .outreach-row { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 6px; }
+    .outreach-row-top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .outreach-row-bottom { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding-left: 52px; }
     /* Two-line task items on mobile */
     .item-row { flex-wrap: wrap; gap: 4px; padding: 10px 10px 8px 16px; }
     .item-row .chk    { order: 0; align-self: flex-start; margin-top: 2px; }
@@ -1828,25 +1814,29 @@ function renderOutreach() {
       ? `<span class="outreach-pri-badge ${pb.cls}" style="min-width:22px;text-align:center">${pb.badge}</span>`
       : `<span style="display:inline-block;min-width:22px"></span>`;
     return `<div class="outreach-row">
-      <div class="outreach-chk ${o.done ? 'done' : ''}" onclick="toggleOutreachDone(${o.id}, event)">
-        ${o.done ? '<i class="ti ti-check"></i>' : ''}
+      <div class="outreach-row-top">
+        <div class="outreach-chk ${o.done ? 'done' : ''}" onclick="toggleOutreachDone(${o.id}, event)">
+          ${o.done ? '<i class="ti ti-check"></i>' : ''}
+        </div>
+        <div class="e-dot ${dotCls}" onclick="cycleOutreachCat(${o.id}, event)" title="Tap to set energy type"></div>
+        <i class="ti ${typeIcon} outreach-icon" onclick="cycleOutreachType(${o.id}, event)" style="cursor:pointer" title="Tap to change type (${typeTitle})" aria-hidden="true"></i>
+        <div class="outreach-name-wrap" style="flex:1;min-width:0;overflow:hidden">
+          <span class="outreach-name ${o.done ? 'done' : ''}" id="oname-${o.id}" onclick="editOutreachName(${o.id}, event)" title="Tap to edit" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.name}</span>
+          ${o.lastPinged ? `<span class="ping-ago" onclick="setPingDate(${o.id}, event)" title="Tap to change date" style="display:block;margin-top:1px">${formatPingAgo(o.lastPinged)}</span>` : ''}
+          ${o.snoozedUntil && new Date(o.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5;display:block;margin-top:1px">💤 until ${new Date(o.snoozedUntil).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
+        </div>
+        <button class="outreach-del" onclick="deleteOutreach(${o.id}, event)" aria-label="Remove"><i class="ti ti-x"></i></button>
       </div>
-      <div class="e-dot ${dotCls}" onclick="cycleOutreachCat(${o.id}, event)" title="Tap to set energy type"></div>
-      <i class="ti ${typeIcon} outreach-icon" onclick="cycleOutreachType(${o.id}, event)" style="cursor:pointer" title="Tap to change type (${typeTitle})" aria-hidden="true"></i>
-      <div class="outreach-name-wrap" style="flex:1;min-width:0">
-        <span class="outreach-name ${o.done ? 'done' : ''}" id="oname-${o.id}" onclick="editOutreachName(${o.id}, event)" title="Tap to edit">${o.name}</span>
-        ${o.lastPinged ? `<span class="ping-ago" onclick="setPingDate(${o.id}, event)" title="Tap to change date" style="display:block;margin-top:1px">${formatPingAgo(o.lastPinged)}</span>` : ''}
-        ${o.snoozedUntil && new Date(o.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5;display:block;margin-top:1px">💤 until ${new Date(o.snoozedUntil).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
+      <div class="outreach-row-bottom">
+        <button class="ping-btn" onclick="pingOutreach(${o.id}, event)" title="Log a ping">ping</button>
+        <button class="snooze-btn" onclick="snoozeOutreach(${o.id}, event)" title="Snooze contact">💤</button>
+        ${priBadgeOrSpace}
+        <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
+        <div class="outreach-pri-btns">
+          <button class="outreach-pri-btn ${upActive}"   onclick="changeOutreachPri(${o.id},'up',event)">▲</button>
+          <button class="outreach-pri-btn ${downActive}" onclick="changeOutreachPri(${o.id},'down',event)">▼</button>
+        </div>
       </div>
-      <button class="ping-btn" onclick="pingOutreach(${o.id}, event)" title="Log a ping">ping</button>
-      <button class="snooze-btn" onclick="snoozeOutreach(${o.id}, event)" title="Snooze contact">💤</button>
-      ${priBadgeOrSpace}
-      <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
-      <div class="outreach-pri-btns">
-        <button class="outreach-pri-btn ${upActive}"   onclick="changeOutreachPri(${o.id},'up',event)">▲</button>
-        <button class="outreach-pri-btn ${downActive}" onclick="changeOutreachPri(${o.id},'down',event)">▼</button>
-      </div>
-      <button class="outreach-del" onclick="deleteOutreach(${o.id}, event)" aria-label="Remove"><i class="ti ti-x"></i></button>
     </div>`;
   }).join('');
 
