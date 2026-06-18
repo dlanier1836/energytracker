@@ -338,6 +338,7 @@
   .del-btn:hover { color: #D94848; background: #FDE8E8; }
   .cal-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 4px; border-radius: var(--radius); display: flex; align-items: center; flex-shrink: 0; }
   .cal-btn:hover { color: #185FA5; background: #E6F1FB; }
+
   /* Time estimate */
   .est-select { font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 0.5px solid var(--border); background: var(--bg2); color: var(--text2); cursor: pointer; flex-shrink: 0; }
   .est-select:focus { outline: none; border-color: var(--border2); }
@@ -445,6 +446,9 @@
   .sync-status { font-size: 12px; color: var(--text3); margin-bottom: .75rem; min-height: 1.2em; }
   .sync-ok  { color: #3A9E6C; }
   .sync-err { color: #D94848; }
+  /* Button flash feedback */
+  @keyframes btn-flash { 0% { opacity:1; } 40% { opacity:.4; } 100% { opacity:1; } }
+  .flashing { animation: btn-flash .35s ease; }
 
   @media (max-width: 500px) {
     .stats { grid-template-columns: repeat(2, 1fr); }
@@ -853,6 +857,14 @@ async function apiPost(payload) {
 }
 
 // ── Actions ───────────────────────────────────────────────
+function flashBtn(el) {
+  if (!el) return;
+  el.classList.remove('flashing');
+  void el.offsetWidth; // force reflow
+  el.classList.add('flashing');
+  setTimeout(() => el.classList.remove('flashing'), 400);
+}
+
 function toggleAddStar() {
   addStarred = !addStarred;
   const btn = document.getElementById('add-star-btn');
@@ -888,6 +900,7 @@ async function addItem() {
   btn.style.color       = 'var(--text3)';
   btn.style.borderColor = 'var(--border2)';
   btn.style.background  = 'none';
+  flashBtn(document.querySelector('.add-btn'));
   render();
   await apiPost({ action: 'add', item });
 }
@@ -1527,6 +1540,7 @@ async function addOutreach() {
   document.getElementById('o-name').value = '';
   outreachAddStarred = false;
   toggleOutreachAddStar();
+  flashBtn(document.querySelector('.outreach-add button'));
   renderOutreach();
 }
 
@@ -1604,6 +1618,7 @@ async function pingOutreach(id, e) {
   nowBtn.addEventListener('click', async function(ev) {
     ev.stopPropagation();
     o.lastPinged = new Date().toISOString();
+    flashBtn(nowBtn);
     await outreachPost({ action: 'updateOutreach', item: o });
     renderOutreach();
   });
