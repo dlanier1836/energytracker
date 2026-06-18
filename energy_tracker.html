@@ -2045,20 +2045,21 @@ function delegatedPanelHTML() {
   const rows = delegatedItems.map(i => {
     const expiry = i.delegationExpiry ? new Date(i.delegationExpiry) : null;
     const daysLeft = expiry ? Math.ceil((expiry - new Date()) / 86400000) : null;
-    const expiryLabel = expiry
-      ? (daysLeft < 0 ? `<span style="font-size:11px;color:#D94848;font-weight:600">↩ overdue</span>`
-       : daysLeft === 0 ? `<span style="font-size:11px;color:#C47D24;font-weight:600">↩ today</span>`
-       : `<span style="font-size:11px;color:#185FA5">↩ ${expiry.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>`)
+    let expiryLabel = '';
+    if (expiry) {
+      if (daysLeft < 0)       expiryLabel = '<span style="font-size:11px;color:#D94848;font-weight:600">↩ overdue</span>';
+      else if (daysLeft === 0) expiryLabel = '<span style="font-size:11px;color:#C47D24;font-weight:600">↩ today</span>';
+      else                    expiryLabel = '<span style="font-size:11px;color:#185FA5">↩ ' + expiry.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</span>';
+    }
+    const delegateInfo = i.delegatedTo
+      ? '<span style="font-size:11px;color:#185FA5;margin-top:2px;display:block">→ ' + i.delegatedTo + ' ' + expiryLabel + '</span>'
       : '';
-    // Render as full item card with recall button appended
-    const card = itemHTML(i);
-    // Inject delegated-to + expiry into item meta and recall button before del button
-    return card
+    const recallBtn = '<button class="delegated-recall" onclick="event.stopPropagation();recallDelegated(' + i.id + ')">↑ Recall</button>';
+    return itemHTML(i)
       .replace('</div>
-      <button class="del-btn"', 
-        `${i.delegatedTo ? `<span style="font-size:11px;color:#185FA5;margin-top:2px;display:block">→ ${i.delegatedTo} ${expiryLabel}</span>` : ''}</div>
-      <button class="delegated-recall" onclick="event.stopPropagation();recallDelegated(${i.id})">↑ Recall</button>
-      <button class="del-btn"`);
+      <button class="del-btn"', delegateInfo + '</div>
+      ' + recallBtn + '
+      <button class="del-btn"');
   }).join('');
 
   return `<div class="delegated-panel ${isCollapsed ? 'collapsed' : ''}" id="delegated-panel-inline" onclick="if(event.target===this||event.target.closest('.delegated-hdr'))toggleDelegated()">
