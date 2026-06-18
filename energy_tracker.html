@@ -449,6 +449,19 @@
     .outreach-add select { flex: 1; }
     .outreach-add button { flex: 1; }
     .outreach-type-toggle { display: none; }
+    /* Two-line outreach rows on mobile */
+    .outreach-row { flex-wrap: wrap; padding: 8px 6px; }
+    .outreach-row .outreach-name-wrap { flex: 1 1 100%; order: 1; margin-bottom: 4px; min-width: 0; }
+    .outreach-row .outreach-chk  { order: 0; }
+    .outreach-row .e-dot          { order: 0; }
+    .outreach-row .outreach-icon  { order: 0; }
+    .outreach-row .ping-btn       { order: 2; }
+    .outreach-row .snooze-btn     { order: 2; }
+    .outreach-row .outreach-pri-badge,
+    .outreach-row span[style*="min-width:22px"] { order: 2; }
+    .outreach-row .outreach-star  { order: 2; }
+    .outreach-row .outreach-pri-btns { order: 2; }
+    .outreach-row .outreach-del   { order: 2; margin-left: auto; }
   }
 </style>
 </head>
@@ -568,6 +581,7 @@
           <option value="linkedin">LinkedIn</option>
         </select>
         <button onclick="addOutreach()">Add</button>
+        <button id="o-star-btn" onclick="toggleOutreachAddStar()" title="Star for today" style="background:none;border:0.5px solid var(--border2);color:var(--text3);font-size:16px;padding:5px 8px;border-radius:var(--radius);cursor:pointer;white-space:nowrap">★</button>
       </div>
       <div class="outreach-list" id="outreach-list"></div>
       <div class="outreach-footer">
@@ -649,7 +663,7 @@ const PRI = {
 // ── State ─────────────────────────────────────────────────
 let offClock = localStorage.getItem('offClock') === 'true';
 let items = [];
-let activePills = new Set(['all']);
+let activePills = new Set(['starred']); // default to Today view on load
 let catFilter   = null;   // set when stat box clicked
 let expandedId  = null;
 let scriptUrl   = localStorage.getItem('scriptUrl') || '';
@@ -1413,6 +1427,16 @@ function updatePomoBar() {
 let outreachItems = [];
 let outreachTypeFilter = 'all';
 let outreachCollapsed = false;
+let outreachAddStarred = false;
+
+function toggleOutreachAddStar() {
+  outreachAddStarred = !outreachAddStarred;
+  const btn = document.getElementById('o-star-btn');
+  if (!btn) return;
+  btn.style.color       = outreachAddStarred ? '#f59e0b' : 'var(--text3)';
+  btn.style.borderColor = outreachAddStarred ? '#f59e0b' : 'var(--border2)';
+  btn.style.background  = outreachAddStarred ? '#FEF9EE' : 'none';
+}
 
 // Energy cycling: 0=neutral(gray) 1=risk(red) 2=energizing(green) 3=draining(amber)
 // stored as cat string matching item cats: '3'=neutral,'1'=risk,'2'=enrg,'4'=drain
@@ -1481,12 +1505,14 @@ async function addOutreach() {
   const type = document.getElementById('o-type').value;
   const names = raw.split(/[,\u000a]+/).map(s => s.trim()).filter(Boolean);
   for (const name of names) {
-    const item = { id: Date.now() + Math.random(), name, type, cat:'3', pri:'2', starred:false, done:false, archived:false, added: new Date().toISOString().slice(0,10) };
+    const item = { id: Date.now() + Math.random(), name, type, cat:'3', pri:'2', starred:outreachAddStarred, done:false, archived:false, added: new Date().toISOString().slice(0,10) };
     item.id = Math.floor(item.id);
     outreachItems.unshift(item);
     await outreachPost({ action: 'addOutreach', item });
   }
   document.getElementById('o-name').value = '';
+  outreachAddStarred = false;
+  toggleOutreachAddStar();
   renderOutreach();
 }
 
