@@ -338,6 +338,32 @@
   .del-btn:hover { color: #D94848; background: #FDE8E8; }
   .cal-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 16px; padding: 4px; border-radius: var(--radius); display: flex; align-items: center; flex-shrink: 0; }
   .cal-btn:hover { color: #185FA5; background: #E6F1FB; }
+  .rev-btn { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700; padding: 2px 5px; border-radius: 4px; flex-shrink: 0; color: var(--text3); line-height: 1; }
+  .rev-btn.on { color: #3A9E6C; }
+  .rev-btn:hover { background: var(--bg2); }
+  /* Delegated panel */
+  .delegated-panel { border-radius: var(--radius-lg); border: 1.5px solid #6B28A0; margin-bottom: 8px; overflow: hidden; background: var(--bg); }
+  .delegated-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #F3E8FE; border-bottom: 0.5px solid #d4b8f0; cursor: pointer; user-select: none; }
+  html.dark .delegated-hdr { background: #1e1228; border-color: #3a1a5a; }
+  .delegated-hdr-title { font-size: 12px; font-weight: 600; color: #6B28A0; flex: 1; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  html.dark .delegated-hdr-title { color: #c4b5fd; }
+  .delegated-count { font-size: 11px; border: 0.5px solid #6B28A0; border-radius: 20px; padding: 1px 8px; color: #6B28A0; }
+  html.dark .delegated-count { border-color: #c4b5fd; color: #c4b5fd; }
+  .delegated-chevron { font-size: 15px; color: #6B28A0; transition: transform .2s; }
+  html.dark .delegated-chevron { color: #c4b5fd; }
+  .delegated-panel.collapsed .delegated-chevron { transform: rotate(-90deg); }
+  .delegated-panel.collapsed .delegated-body { display: none; }
+  .delegated-body { padding: 6px 10px 8px; }
+  .delegated-row { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: var(--radius); }
+  .delegated-row:hover { background: var(--bg2); }
+  .delegated-name { flex: 1; font-size: 13px; }
+  .delegated-to { font-size: 11px; color: #6B28A0; background: #F3E8FE; border-radius: 4px; padding: 1px 6px; }
+  html.dark .delegated-to { background: #1e1228; color: #c4b5fd; }
+  .delegated-expiry { font-size: 11px; color: var(--text3); }
+  .delegated-recall { background: none; border: 0.5px solid #6B28A0; color: #6B28A0; font-size: 11px; padding: 2px 8px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
+  html.dark .delegated-recall { border-color: #c4b5fd; color: #c4b5fd; }
+  .delegated-recall:hover { background: #F3E8FE; }
+  html.dark .delegated-recall:hover { background: #1e1228; }
 
   /* Time estimate */
   .est-select { font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 0.5px solid var(--border); background: var(--bg2); color: var(--text2); cursor: pointer; flex-shrink: 0; }
@@ -650,6 +676,7 @@
     <span class="pill" data-pill="personal" onclick="togglePill('personal')">Personal</span>
     <span class="pill" data-pill="prioritized" onclick="togglePill('prioritized')">!! Prioritized</span>
     <span class="pill starred-pill" data-pill="starred" onclick="togglePill('starred')">★ Today</span>
+    <span class="pill" data-pill="revenue" onclick="togglePill('revenue')" style="color:#3A9E6C;border-color:#3A9E6C">$ Revenue</span>
     <button class="archive-all-btn" id="archive-all-btn" onclick="archiveAllCleared()" style="display:none">↓ Archive all cleared</button>
   </div>
 
@@ -749,6 +776,7 @@ function toggleTodayHeader() {
   updateFilterUI();
   updateLoadCounter();
   renderRemission();
+  renderDelegated();
   render();
   renderOutreach();
   document.getElementById('today-hdr-btn').classList.toggle('active', activePills.has('starred'));
@@ -808,6 +836,10 @@ function normalize(r) {
     estimate: r.estimate ? Number(r.estimate) : 0,
     remission:    r.remission    === true || String(r.remission).toUpperCase()    === 'TRUE',
     snoozedUntil: r.snoozedUntil || '',
+    revenue:      r.revenue      === true || String(r.revenue).toUpperCase()      === 'TRUE',
+    delegated:    r.delegated    === true || String(r.delegated).toUpperCase()    === 'TRUE',
+    delegatedTo:  r.delegatedTo  || '',
+    delegationExpiry: r.delegationExpiry ? String(r.delegationExpiry).slice(0,10) : '',
   };
 }
 
@@ -831,6 +863,7 @@ async function loadItems() {
     const arr = Array.isArray(data) ? data : (data.items || []);
     items = arr.map(normalize).filter(i => !i.archived);
     autoStarUnsnoozed();
+    autoCheckDelegations();
     localStorage.setItem('itemsCache', JSON.stringify(items));
     setSyncStatus('Synced', 'sync-ok');
     render();
@@ -891,7 +924,11 @@ async function addItem() {
     subtasks:  [],
     estimate:     30,
     remission:    false,
-    snoozedUntil: '',
+    snoozedUntil:     '',
+    revenue:          false,
+    delegated:        false,
+    delegatedTo:      '',
+    delegationExpiry: '',
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
@@ -910,6 +947,15 @@ async function toggle(id, e) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   item.cleared = !item.cleared;
+  render();
+  await apiPost({ action: 'update', item });
+}
+
+async function toggleRevenue(id, e) {
+  e.stopPropagation();
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.revenue = !item.revenue;
   render();
   await apiPost({ action: 'update', item });
 }
@@ -967,7 +1013,7 @@ async function toggleStar(id, e) {
 }
 
 function toggleExpand(id, e) {
-  if (e.target.closest('.chk') || e.target.closest('.del-btn') || e.target.closest('.pri-btn') || e.target.closest('.star-btn') || e.target.closest('.cal-btn')) return;
+  if (e.target.closest('.chk') || e.target.closest('.del-btn') || e.target.closest('.pri-btn') || e.target.closest('.star-btn') || e.target.closest('.cal-btn') || e.target.closest('.rev-btn')) return;
   expandedId = (expandedId === id) ? null : id;
   render();
 }
@@ -983,7 +1029,11 @@ async function saveEdit(id) {
   item.name    = document.getElementById('edit-name-' + id).value.trim() || item.name;
   item.cat      = document.getElementById('edit-cat-'  + id).value;
   item.deadline    = document.getElementById('edit-deadline-' + id).value || '';
-  item.snoozedUntil = document.getElementById('edit-snooze-' + id).value || '';
+  item.snoozedUntil    = document.getElementById('edit-snooze-' + id).value || '';
+  const newDelegatedTo = (document.getElementById('edit-delegatedto-' + id).value || '').trim();
+  item.delegatedTo      = newDelegatedTo;
+  item.delegated        = !!newDelegatedTo;
+  item.delegationExpiry = document.getElementById('edit-delegationexpiry-' + id).value || '';
   item.tag     = document.getElementById('edit-tag-'  + id).value;
   // pri already updated in-place via selectPri
   expandedId = null;
@@ -1040,6 +1090,7 @@ function visible() {
   const now = new Date();
   return items.filter(i => {
     if (i.remission) return false;
+    if (i.delegated) return false;
     // Snoozed items hidden unless searching
     if (i.snoozedUntil && !searchQuery) {
       const snoozeDate = new Date(i.snoozedUntil);
@@ -1047,6 +1098,7 @@ function visible() {
     }
     if (offClock && i.tag === 'work') return false;
     if (searchQuery && !i.name.toLowerCase().includes(searchQuery)) return false;
+    if (activePills.has('revenue') && !i.revenue) return false;
     if (catFilter) return i.cat === catFilter;
     const all  = activePills.has('all');
     const work = activePills.has('work');
@@ -1097,7 +1149,7 @@ function sortItems(arr) {
 // Today view: group by priority tier with section headers
 function renderTodayView(vis) {
   const PRI_LABELS = { '0':'!! Top priority', '1':'! High priority', '2':'Normal', '3':'↓ Low priority' };
-  let html = '';
+  let html = '<div id="delegated-anchor"></div>';
   ['0','1','2','3'].forEach(p => {
     const group = vis.filter(i => (i.pri||'2') === p);
     if (!group.length) return;
@@ -1121,6 +1173,7 @@ function render() {
   items.filter(i => {
     if (i.cleared) return false;
     if (i.remission) return false;
+    if (i.delegated) return false;
     if (offClock && i.tag === 'work') return false;
     if (todayStar && !i.starred) return false;
     return true;
@@ -1153,6 +1206,8 @@ function render() {
   } else if (activePills.has('prioritized')) {
     html = renderTodayView(vis);
   } else {
+    // Inject delegated panel at top
+    html += '<div id="delegated-anchor"></div>';
     // Group by category
     CAT_ORDER.forEach(k => {
       const group = vis.filter(i => i.cat === k);
@@ -1259,6 +1314,11 @@ function itemHTML(i) {
         </select>
       </div>
     </div>
+    <div class="edit-label" style="margin-top:8px">Delegated to <span style="font-weight:400;text-transform:none;font-size:11px">(optional — moves task to Delegated panel)</span></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <input class="edit-field" type="text" id="edit-delegatedto-${i.id}" value="${i.delegatedTo || ''}" placeholder="Person's name…" style="margin-bottom:0;flex:1" />
+      <input class="edit-field" type="date" id="edit-delegationexpiry-${i.id}" value="${i.delegationExpiry || ''}" style="margin-bottom:0;width:140px" title="Check-back date" />
+    </div>
     <div class="edit-label" style="margin-top:8px">Priority</div>
     <div class="pri-selector" id="edit-pri-${i.id}">
       ${['0','1','2','3'].map(v => {
@@ -1300,6 +1360,7 @@ function itemHTML(i) {
         ${(i.subtasks && i.subtasks.length) ? `<div class="subtask-pips"><span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-right:4px">subtasks</span>${i.subtasks.map(s => `<div class="pip ${s.done ? 'done' : 'open'}" title="${s.name}"></div>`).join('')}</div>` : ''}
       </div>
       ${priBadge}
+      <button class="rev-btn ${i.revenue ? 'on' : ''}" onclick="toggleRevenue(${i.id}, event)" title="${i.revenue ? 'Revenue item (tap to unmark)' : 'Mark as revenue impact'}">$</button>
       ${starBtn}
       <select class="est-select" onclick="event.stopPropagation()" onchange="setEstimate(${i.id}, this.value)" title="Time estimate">
         <option value="0"   ${i.estimate===0 ?'selected':''}>–</option>
@@ -1927,6 +1988,80 @@ function outreachItemHTML(o) {
   </div>`;
 }
 
+
+// ── Delegated ─────────────────────────────────────────────
+let delegatedCollapsed = false;
+
+async function recallDelegated(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.delegated = false;
+  // Keep delegatedTo name for history — just clear the delegated flag
+  if (item.delegationExpiry) item.delegationExpiry = '';
+  render();
+  await apiPost({ action: 'update', item });
+}
+
+function autoCheckDelegations() {
+  const now = new Date();
+  let changed = false;
+  items.forEach(i => {
+    if (i.delegated && i.delegationExpiry && new Date(i.delegationExpiry) <= now) {
+      // Delegation expired — recall with star + high priority
+      i.delegated = false;
+      i.starred   = true;
+      i.pri       = '1'; // ! High priority
+      changed     = true;
+      apiPost({ action: 'update', item: i });
+    }
+  });
+  if (changed) render();
+}
+
+function delegatedPanelHTML() {
+  const delegatedItems = items.filter(i => i.delegated && !i.archived && !i.cleared);
+  if (!delegatedItems.length) return '';
+  const isCollapsed = delegatedCollapsed;
+
+  const rows = delegatedItems.map(i => {
+    const expiry = i.delegationExpiry ? new Date(i.delegationExpiry) : null;
+    const daysLeft = expiry ? Math.ceil((expiry - new Date()) / 86400000) : null;
+    const expiryLabel = expiry
+      ? (daysLeft < 0 ? `<span class="delegated-expiry" style="color:#D94848">overdue</span>`
+       : daysLeft === 0 ? `<span class="delegated-expiry" style="color:#C47D24">due today</span>`
+       : `<span class="delegated-expiry">↩ ${daysLeft}d</span>`)
+      : '';
+    return `<div class="delegated-row">
+      <span class="delegated-name">${i.name}</span>
+      ${i.delegatedTo ? `<span class="delegated-to">→ ${i.delegatedTo}</span>` : ''}
+      ${expiryLabel}
+      <button class="delegated-recall" onclick="recallDelegated(${i.id})">↑ Recall</button>
+    </div>`;
+  }).join('');
+
+  return `<div class="delegated-panel ${isCollapsed ? 'collapsed' : ''}" id="delegated-panel-inline" onclick="if(event.target===this||event.target.closest('.delegated-hdr'))toggleDelegated()">
+    <div class="delegated-hdr">
+      <div class="delegated-hdr-title">
+        <i class="ti ti-user-check" style="font-size:14px" aria-hidden="true"></i>
+        Delegated
+        <span class="delegated-count">${delegatedItems.length}</span>
+      </div>
+      <i class="ti ti-chevron-down delegated-chevron" aria-hidden="true"></i>
+    </div>
+    <div class="delegated-body">${rows}</div>
+  </div>`;
+}
+
+function renderDelegated() {
+  const anchor = document.getElementById('delegated-anchor');
+  if (anchor) anchor.outerHTML = delegatedPanelHTML();
+}
+
+function toggleDelegated() {
+  delegatedCollapsed = !delegatedCollapsed;
+  const p = document.getElementById('delegated-panel-inline');
+  if (p) p.classList.toggle('collapsed', delegatedCollapsed);
+}
 
 // ── Risks in Remission ────────────────────────────────────
 let remissionCollapsed = true;
