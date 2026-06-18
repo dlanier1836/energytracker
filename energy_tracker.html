@@ -450,18 +450,31 @@
     .outreach-add button { flex: 1; }
     .outreach-type-toggle { display: none; }
     /* Two-line outreach rows on mobile */
-    .outreach-row { flex-wrap: wrap; padding: 8px 6px; }
-    .outreach-row .outreach-name-wrap { flex: 1 1 100%; order: 1; margin-bottom: 4px; min-width: 0; }
-    .outreach-row .outreach-chk  { order: 0; }
-    .outreach-row .e-dot          { order: 0; }
-    .outreach-row .outreach-icon  { order: 0; }
-    .outreach-row .ping-btn       { order: 2; }
-    .outreach-row .snooze-btn     { order: 2; }
+    .outreach-row { flex-wrap: wrap; padding: 8px 6px; gap: 6px; }
+    .outreach-row .outreach-chk   { order: 0; align-self: flex-start; margin-top: 2px; }
+    .outreach-row .e-dot          { order: 0; align-self: flex-start; margin-top: 4px; }
+    .outreach-row .outreach-icon  { order: 0; align-self: flex-start; margin-top: 1px; }
+    .outreach-row .outreach-name-wrap { flex: 1 1 0; min-width: 0; order: 0; }
+    .outreach-row .outreach-name  { white-space: normal; word-break: break-word; }
+    .outreach-row .ping-btn       { order: 1; flex: 0 0 auto; }
+    .outreach-row .snooze-btn     { order: 1; flex: 0 0 auto; }
     .outreach-row .outreach-pri-badge,
-    .outreach-row span[style*="min-width:22px"] { order: 2; }
-    .outreach-row .outreach-star  { order: 2; }
-    .outreach-row .outreach-pri-btns { order: 2; }
-    .outreach-row .outreach-del   { order: 2; margin-left: auto; }
+    .outreach-row span[style*="min-width:22px"] { order: 1; flex: 0 0 auto; }
+    .outreach-row .outreach-star  { order: 1; flex: 0 0 auto; }
+    .outreach-row .outreach-pri-btns { order: 1; flex: 0 0 auto; }
+    .outreach-row .outreach-del   { order: 1; flex: 0 0 auto; margin-left: auto; }
+    /* Two-line task items on mobile */
+    .item-row { flex-wrap: wrap; gap: 4px; padding: 10px 10px 8px 16px; }
+    .item-row .chk    { order: 0; align-self: flex-start; margin-top: 2px; }
+    .item-row .item-body { flex: 1 1 0; min-width: 0; order: 0; }
+    .item-row .pri-badge { order: 1; }
+    .item-row .star-btn  { order: 1; }
+    .item-row .est-select { order: 1; font-size: 12px; }
+    .item-row .pri-btns  { order: 1; }
+    .item-row .cal-btn   { order: 1; }
+    .item-row .del-btn   { order: 1; }
+    /* Hide estimate on mobile to save space */
+    .item-row .est-select { display: none; }
   }
 </style>
 </head>
