@@ -1357,9 +1357,13 @@ function render() {
   } else if (activePills.has('prioritized')) {
     html = renderTodayView(vis);
   } else {
-    // Group by category
+    // Separate cleared from active — cleared pool at very bottom
+    const activeVis  = vis.filter(i => !i.cleared);
+    const clearedVis = vis.filter(i =>  i.cleared);
+    html += '<div id="delegated-anchor"></div>';
+    // Group active by category
     CAT_ORDER.forEach(k => {
-      const group = vis.filter(i => i.cat === k);
+      const group = activeVis.filter(i => i.cat === k);
       const c = CATS[k];
       if (group.length) {
         html += `<div class="section-hdr"><span class="dot ${c.dot}"></span>${c.label}</div>`;
@@ -1368,9 +1372,13 @@ function render() {
       // After Risk group, inject Risks in Remission then Delegated panel
       if (k === '1') {
         html += remissionPanelHTML();
-        html += '<div id="delegated-anchor"></div>';
       }
     });
+    // All cleared items at the very bottom
+    if (clearedVis.length) {
+      html += '<div class="section-hdr" style="color:var(--text3)">✓ Cleared</div>';
+      clearedVis.forEach(i => { html += itemHTML(i); });
+    }
   }
 
   const combined = html;
@@ -2247,24 +2255,27 @@ function delegatedPanelHTML() {
   const isCollapsed = delegatedCollapsed;
 
   const rows = delegatedItems.map(i => {
-    const expiry = i.delegationExpiry ? new Date(i.delegationExpiry) : null;
+    const expiry = i.delegationExpiry ? new Date(i.delegationExpiry + 'T12:00:00') : null;
     const daysLeft = expiry ? Math.ceil((expiry - new Date()) / 86400000) : null;
-    let expiryLabel = '';
+    let expiryText = '';
     if (expiry) {
-      if (daysLeft < 0)        expiryLabel = '<span style="font-size:11px;color:#D94848;font-weight:600">↩ overdue</span>';
-      else if (daysLeft === 0) expiryLabel = '<span style="font-size:11px;color:#C47D24;font-weight:600">↩ today</span>';
-      else                     expiryLabel = '<span style="font-size:11px;color:#185FA5">↩ ' + expiry.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + '</span>';
+      if (daysLeft < 0)        expiryText = ' · overdue';
+      else if (daysLeft === 0) expiryText = ' · check back today';
+      else                     expiryText = ' · ↩ ' + expiry.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     }
-    const meta = '<div style="font-size:11px;color:#185FA5;margin-top:3px">'
-      + (i.delegatedTo ? '→ ' + i.delegatedTo + ' ' : '')
-      + expiryLabel + '</div>';
-    const recall = '<button class="delegated-recall" style="margin-left:4px" onclick="event.stopPropagation();recallDelegated(' + i.id + ')">↑ Recall</button>';
-    const baseCard = itemHTML(i);
-    // Append meta info inside item-body by finding closing tag
-    const cardWithMeta = baseCard.replace(/(<div class="item-body">[\s\S]*?<\/div>)\s*(<\/div>)/, '$1' + meta + '$2');
-    return '<div style="position:relative">' + cardWithMeta
-      + '<div style="position:absolute;bottom:8px;right:44px">' + recall + '</div>'
-      + '</div>';
+    const delegationLine = (i.delegatedTo ? '→ ' + i.delegatedTo : '') + expiryText;
+    // Modify the item to show delegation info in its meta
+    const augmented = Object.assign({}, i, { _delegationLine: delegationLine });
+    const card = itemHTML(i);
+    // Inject delegation line after item-meta div
+    const recall = '<button class="delegated-recall" onclick="event.stopPropagation();recallDelegated(' + i.id + ')">↑ Recall</button>';
+    // Add delegation info + recall as a footer bar on the card
+    const footer = delegationLine
+      ? '<div style="padding:4px 12px 6px;font-size:11px;color:#185FA5;display:flex;justify-content:space-between;align-items:center">'
+        + '<span>' + delegationLine + '</span>' + recall + '</div>'
+      : '<div style="padding:4px 12px 6px;text-align:right">' + recall + '</div>';
+    // Insert footer before the closing </div> of the item card
+    return card.replace(/(<\/div>)\s*$/, footer + '$1');
   }).join('');
 
   return `<div class="delegated-panel ${isCollapsed ? 'collapsed' : ''}" id="delegated-panel-inline" onclick="if(event.target===this||event.target.closest('.delegated-hdr'))toggleDelegated()">
