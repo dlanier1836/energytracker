@@ -372,6 +372,32 @@
   /* Archive all button */
   .archive-all-btn { font-size: 12px; color: var(--text3); background: none; border: 0.5px solid var(--border); padding: 5px 12px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
   .archive-all-btn:hover { color: #7A4D10; border-color: #C47D24; background: #FEF3E2; }
+  /* Archive bucket */
+  .archive-panel { border-radius: var(--radius-lg); border: 0.5px solid var(--border2); margin-top: 8px; overflow: hidden; background: var(--bg); }
+  .archive-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--bg2); border-bottom: 0.5px solid var(--border); cursor: pointer; user-select: none; }
+  .archive-hdr-title { font-size: 12px; font-weight: 600; color: var(--text2); flex: 1; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  .archive-count { font-size: 11px; border: 0.5px solid var(--border2); border-radius: 20px; padding: 1px 8px; color: var(--text3); }
+  .archive-chevron { font-size: 15px; color: var(--text3); transition: transform .2s; }
+  .archive-panel.collapsed .archive-chevron { transform: rotate(-90deg); }
+  .archive-panel.collapsed .archive-body { display: none; }
+  .archive-body { padding: 6px 8px 8px; }
+  .archive-item { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: var(--radius); }
+  .archive-item-name { flex: 1; font-size: 13px; color: var(--text2); text-decoration: line-through; opacity: .7; }
+  .archive-item-cat { font-size: 10px; padding: 1px 5px; border-radius: 3px; }
+  /* Weekly reflection */
+  .reflection-panel { border-radius: var(--radius-lg); border: 0.5px solid var(--border2); margin-top: 8px; overflow: hidden; background: var(--bg); }
+  .reflection-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--bg2); border-bottom: 0.5px solid var(--border); cursor: pointer; user-select: none; }
+  .reflection-hdr-title { font-size: 12px; font-weight: 600; color: var(--text2); flex: 1; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  .reflection-panel.collapsed .reflection-chevron { transform: rotate(-90deg); }
+  .reflection-panel.collapsed .reflection-body { display: none; }
+  .reflection-body { padding: 10px 14px; }
+  .reflection-cat-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .reflection-cat-label { font-size: 12px; font-weight: 600; width: 90px; }
+  .reflection-bar { height: 8px; border-radius: 4px; flex: 0 0 auto; min-width: 4px; }
+  .reflection-count { font-size: 12px; color: var(--text2); }
+  .reflection-items { margin-top: 8px; }
+  .reflection-item { font-size: 12px; color: var(--text2); padding: 3px 0; border-bottom: 0.5px solid var(--border); display: flex; gap: 8px; }
+  .reflection-item-date { font-size: 11px; color: var(--text3); white-space: nowrap; }
 
   /* Inline edit panel */
   .item-edit { display: none; padding: 12px 16px 16px; border-top: 0.5px solid var(--border); background: var(--bg2); }
@@ -681,6 +707,8 @@
 
   <!-- List -->
   <div id="list"></div>
+  <div id="archive-bucket"></div>
+  <div id="reflection-bucket"></div>
 
 </div>
 
@@ -705,6 +733,7 @@ const PRI = {
 // ── State ─────────────────────────────────────────────────
 let offClock = localStorage.getItem('offClock') === 'true';
 let items = [];
+let archivedItems = [];
 let activePills = new Set(['starred']); // default to Today view on load
 let catFilter   = null;   // set when stat box clicked
 let expandedId  = null;
@@ -830,7 +859,8 @@ function normalize(r) {
     pri:      String(r.pri != null && r.pri !== '' ? r.pri : '2'),
     deadline: /\d{4}-\d{2}-\d{2}/.test(r.deadline || '') ? r.deadline.slice(0,10) : '',
     starred:  r.starred  === true || String(r.starred).toUpperCase()  === 'TRUE',
-    archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
+    archived:   r.archived  === true || String(r.archived).toUpperCase()  === 'TRUE',
+    archivedAt: r.archivedAt || '',
     subtasks: (() => { try { const v = r.subtasks; if (!v || v === '' || v === '0' || v === 0) return []; if (Array.isArray(v)) return v; const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch(e) { return []; } })(),
     estimate: r.estimate ? Number(r.estimate) : 0,
     remission:    r.remission    === true || String(r.remission).toUpperCase()    === 'TRUE',
@@ -860,7 +890,9 @@ async function loadItems() {
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     const arr = Array.isArray(data) ? data : (data.items || []);
-    items = arr.map(normalize).filter(i => !i.archived);
+    const all = arr.map(normalize);
+    items = all.filter(i => !i.archived);
+    archivedItems = all.filter(i => i.archived);
     autoStarUnsnoozed();
     autoCheckDelegations();
     localStorage.setItem('itemsCache', JSON.stringify(items));
@@ -919,7 +951,8 @@ async function addItem() {
     pri:      document.getElementById('f-pri').value,
     deadline: '',
     starred:   addStarred,
-    archived:  false,
+    archived:   false,
+    archivedAt: '',
     subtasks:  [],
     estimate:     30,
     remission:    false,
@@ -985,13 +1018,117 @@ async function del(id, e) {
 async function archiveAllCleared() {
   const toArchive = items.filter(i => i.cleared);
   if (!toArchive.length) return;
-  toArchive.forEach(i => { i.archived = true; });
+  const today = new Date().toISOString().slice(0,10);
+  toArchive.forEach(i => { i.archived = true; i.archivedAt = today; });
+  archivedItems = [...toArchive, ...archivedItems];
   items = items.filter(i => !i.cleared);
   expandedId = null;
   render();
+  renderArchiveBucket();
   for (const item of toArchive) {
     await apiPost({ action: 'update', item });
   }
+}
+
+async function clearArchive() {
+  if (!archivedItems.length) return;
+  if (!confirm('Permanently remove all ' + archivedItems.length + ' archived items?')) return;
+  const toDelete = [...archivedItems];
+  archivedItems = [];
+  renderArchiveBucket();
+  for (const item of toDelete) {
+    await apiPost({ action: 'delete', id: item.id });
+  }
+}
+
+// ── Archive bucket ───────────────────────────────────────
+let archiveCollapsed = true;
+let reflectionCollapsed = true;
+
+function toggleArchiveBucket() {
+  archiveCollapsed = !archiveCollapsed;
+  const p = document.getElementById('archive-panel-el');
+  if (p) p.classList.toggle('collapsed', archiveCollapsed);
+}
+function toggleReflectionBucket() {
+  reflectionCollapsed = !reflectionCollapsed;
+  const p = document.getElementById('reflection-panel-el');
+  if (p) p.classList.toggle('collapsed', reflectionCollapsed);
+}
+function renderArchiveBucket() {
+  const el = document.getElementById('archive-bucket');
+  if (!el) return;
+  if (!archivedItems.length) { el.innerHTML = ''; return; }
+  const today = new Date().toISOString().slice(0,10);
+  const todayItems = archivedItems.filter(i => i.archivedAt === today);
+  if (!todayItems.length) { el.innerHTML = ''; return; }
+
+  const rows = todayItems.map(i => {
+    const c = CATS[i.cat] || CATS['3'];
+    return '<div class="archive-item">'
+      + '<span class="archive-item-name">' + i.name + '</span>'
+      + '<span class="badge ' + c.cls + ' archive-item-cat">' + c.short + '</span>'
+      + '</div>';
+  }).join('');
+
+  el.innerHTML = '<div class="archive-panel ' + (archiveCollapsed ? 'collapsed' : '') + '" id="archive-panel-el">'
+    + '<div class="archive-hdr" onclick="toggleArchiveBucket()">'
+    + '<div class="archive-hdr-title"><i class="ti ti-archive" style="font-size:13px"></i> Archived today'
+    + '<span class="archive-count">' + todayItems.length + '</span></div>'
+    + '<i class="ti ti-chevron-down archive-chevron"></i></div>'
+    + '<div class="archive-body">' + rows
+    + '<div style="padding-top:8px;text-align:right"><button class="archive-all-btn" onclick="clearArchive()">✕ Clear archive</button></div>'
+    + '</div></div>';
+}
+
+function renderReflection() {
+  const el = document.getElementById('reflection-bucket');
+  if (!el) return;
+  if (!archivedItems.length) { el.innerHTML = ''; return; }
+
+  // Last 7 days
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+  const weekItems = archivedItems.filter(i => {
+    if (!i.archivedAt) return false;
+    return new Date(i.archivedAt) >= cutoff;
+  });
+  if (!weekItems.length) { el.innerHTML = ''; return; }
+
+  // Energy breakdown
+  const counts = { '1':0,'2':0,'3':0,'4':0 };
+  weekItems.forEach(i => { if (counts[i.cat] !== undefined) counts[i.cat]++; });
+  const total = weekItems.length;
+  const maxCount = Math.max(...Object.values(counts));
+
+  const catColors = { '1':'#D94848','2':'#3A9E6C','3':'#9b9b96','4':'#C47D24' };
+  const breakdown = ['1','2','3','4'].filter(k => counts[k] > 0).map(k => {
+    const c = CATS[k];
+    const barW = maxCount > 0 ? Math.round((counts[k]/maxCount)*120) : 0;
+    return '<div class="reflection-cat-row">'
+      + '<span class="reflection-cat-label badge ' + c.cls + '">' + c.short + '</span>'
+      + '<div class="reflection-bar" style="width:' + barW + 'px;background:' + catColors[k] + '"></div>'
+      + '<span class="reflection-count">' + counts[k] + '</span>'
+      + '</div>';
+  }).join('');
+
+  // Sorted by date desc
+  const sorted = weekItems.slice().sort((a,b) => (b.archivedAt||'').localeCompare(a.archivedAt||''));
+  const itemList = sorted.map(i => {
+    const c = CATS[i.cat] || CATS['3'];
+    return '<div class="reflection-item">'
+      + '<span class="reflection-item-date">' + (i.archivedAt||'') + '</span>'
+      + '<span class="badge ' + c.cls + '" style="font-size:10px;padding:1px 4px">' + c.short + '</span>'
+      + '<span style="flex:1">' + i.name + '</span>'
+      + '</div>';
+  }).join('');
+
+  el.innerHTML = '<div class="reflection-panel ' + (reflectionCollapsed ? 'collapsed' : '') + '" id="reflection-panel-el">'
+    + '<div class="reflection-hdr" onclick="toggleReflectionBucket()">'
+    + '<div class="reflection-hdr-title"><i class="ti ti-chart-bar" style="font-size:13px"></i> This week ('+ total +' done)</div>'
+    + '<i class="ti ti-chevron-down reflection-chevron archive-chevron"></i></div>'
+    + '<div class="reflection-body">' + breakdown
+    + '<div class="reflection-items" style="margin-top:12px">' + itemList + '</div>'
+    + '</div></div>';
 }
 
 async function changePri(id, dir, e) {
@@ -1241,6 +1378,8 @@ function render() {
   // Inject delegated panel after DOM is written
   renderDelegated();
   renderRemission();
+  renderArchiveBucket();
+  renderReflection();
 }
 
 function deadlineHTML(item) {
@@ -1574,7 +1713,8 @@ function normalizeOutreach(r) {
     pri:      String(r.pri != null && r.pri !== '' ? r.pri : '2'),
     starred:  r.starred === true || String(r.starred).toUpperCase() === 'TRUE',
     done:     r.done === true || String(r.done).toUpperCase() === 'TRUE',
-    archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
+    archived:   r.archived  === true || String(r.archived).toUpperCase()  === 'TRUE',
+    archivedAt: r.archivedAt || '',
     added:    (r.added || '').slice(0,10),
     lastPinged:   r.lastPinged   || '',
     snoozedUntil: /\d{4}-\d{2}-\d{2}/.test(r.snoozedUntil || '') ? r.snoozedUntil.slice(0,10) : '',
@@ -1934,6 +2074,8 @@ function renderOutreach() {
     if (o.snoozedUntil && !searchQuery && new Date(o.snoozedUntil) > nowTs) return false;
     // Search filter
     if (searchQuery && !o.name.toLowerCase().includes(searchQuery)) return false;
+    // Revenue filter
+    if (activePills.has('revenue') && !o.revenue) return false;
     return true;
   });
 
@@ -2220,7 +2362,8 @@ function normalizeErrand(r) {
     pri:      String(r.pri != null && r.pri !== '' ? r.pri : '2'),
     starred:  r.starred === true || String(r.starred).toUpperCase() === 'TRUE',
     done:     r.done    === true || String(r.done).toUpperCase()    === 'TRUE',
-    archived: r.archived === true || String(r.archived).toUpperCase() === 'TRUE',
+    archived:   r.archived  === true || String(r.archived).toUpperCase()  === 'TRUE',
+    archivedAt: r.archivedAt || '',
     added:    (r.added || '').slice(0,10),
   };
 }
