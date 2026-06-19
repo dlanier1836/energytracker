@@ -170,13 +170,15 @@
   html.dark .pill:hover { border-color: #a8a8a3; color: var(--text); }
   html.dark .pill.active { background: transparent !important; color: var(--text) !important; border: 1.5px solid var(--text) !important; box-shadow: 0 0 6px rgba(240,239,233,0.3); }
   html.dark .pill.starred-pill { border-color: #f59e0b; color: #f59e0b; }
-  html.dark .pill.starred-pill.active { background: transparent !important; color: #fbbf24 !important; border-color: #fbbf24 !important; box-shadow: 0 0 8px #fbbf2444; }
+  html.dark .pill.starred-pill.active { background: #f59e0b !important; color: #1a1a00 !important; border-color: #f59e0b !important; box-shadow: 0 0 8px #fbbf2466; }
+  html.dark [data-pill="revenue"].active { background: #3A9E6C !important; color: #fff !important; border-color: #3A9E6C !important; box-shadow: 0 0 8px #3A9E6C66; }
   @media (prefers-color-scheme: dark) {
     html:not(.light):not(.dark) .pill { background: transparent; border-color: #4a4a46; color: #a8a8a3; }
     html:not(.light):not(.dark) .pill:hover { border-color: #a8a8a3; color: var(--text); }
     html:not(.light):not(.dark) .pill.active { background: transparent !important; color: var(--text) !important; border: 1.5px solid var(--text) !important; box-shadow: 0 0 6px rgba(240,239,233,0.3); }
     html:not(.light):not(.dark) .pill.starred-pill { border-color: #f59e0b; color: #f59e0b; }
-    html:not(.light):not(.dark) .pill.starred-pill.active { background: transparent !important; color: #fbbf24 !important; border-color: #fbbf24 !important; box-shadow: 0 0 8px #fbbf2444; }
+    html:not(.light):not(.dark) .pill.starred-pill.active { background: #f59e0b !important; color: #1a1a00 !important; border-color: #f59e0b !important; box-shadow: 0 0 8px #fbbf2466; }
+    html:not(.light):not(.dark) [data-pill="revenue"].active { background: #3A9E6C !important; color: #fff !important; border-color: #3A9E6C !important; }
   }
 
   /* List */
@@ -211,10 +213,10 @@
   .outreach-chk { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; flex-shrink: 0; }
   .outreach-chk.done { background: var(--text2); border-color: var(--text2); color: var(--bg); }
   /* energy dot — tappable cycling color */
-  .e-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; cursor: pointer; border: 1.5px solid var(--border2); transition: background .15s; }
+  .e-dot { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; cursor: pointer; border: 1.5px solid var(--border2); transition: background .15s; }
   .e-dot.e1 { background: #D94848; border-color: #D94848; }
   .e-dot.e2 { background: #3A9E6C; border-color: #3A9E6C; }
-  .e-dot.e3 { background: #9b9b96; border-color: #9b9b96; }
+  .e-dot.e3 { background: repeating-linear-gradient(45deg,#9b9b96 0,#9b9b96 2px,transparent 2px,transparent 5px); border-color: #9b9b96; }
   .e-dot.e4 { background: #C47D24; border-color: #C47D24; }
   .outreach-icon { font-size: 13px; color: var(--text2); flex-shrink: 0; }
   .outreach-name { font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: text; display: block; }
@@ -610,6 +612,7 @@
       </select>
       <button class="add-btn" onclick="addItem()">Add</button>
       <button class="add-btn" id="add-star-btn" onclick="toggleAddStar()" title="Star for today" style="background:none;border:0.5px solid var(--border2);color:var(--text3);font-size:18px;padding:6px 10px;min-width:auto">★</button>
+      <button class="add-btn" id="add-rev-btn" onclick="toggleAddRevenue()" title="Mark as revenue" style="background:none;border:0.5px solid var(--border2);color:var(--text3);font-size:14px;font-weight:700;padding:6px 10px;min-width:auto;display:none">$</button>
     </div>
   </div>
 
@@ -739,6 +742,16 @@ let catFilter   = null;   // set when stat box clicked
 let expandedId  = null;
 let scriptUrl   = localStorage.getItem('scriptUrl') || '';
 let addStarred  = false;
+let addRevenue  = false;
+
+function toggleAddRevenue() {
+  addRevenue = !addRevenue;
+  const btn = document.getElementById('add-rev-btn');
+  if (!btn) return;
+  btn.style.color       = addRevenue ? '#3A9E6C' : 'var(--text3)';
+  btn.style.borderColor = addRevenue ? '#3A9E6C' : 'var(--border2)';
+  btn.style.background  = addRevenue ? '#E0F5EC' : 'none';
+}
 let searchQuery = '';
 
 // ── Theme ─────────────────────────────────────────────────
@@ -812,6 +825,9 @@ function toggleClock() {
   offClock = !offClock;
   localStorage.setItem('offClock', offClock);
   applyClockMode();
+// Show revenue add button if in work mode
+const revAddBtnInit = document.getElementById('add-rev-btn');
+if (revAddBtnInit) revAddBtnInit.style.display = offClock ? 'none' : '';
 }
 function applyClockMode() {
   const ci = document.getElementById('clock-icon'); ci.className = offClock ? 'ti ti-beach' : 'ti ti-calendar-week';
@@ -821,6 +837,8 @@ function applyClockMode() {
   document.getElementById('clock-btn').classList.toggle('off-clock', offClock);
   const revPill = document.getElementById('revenue-pill');
   if (revPill) revPill.style.display = offClock ? 'none' : '';
+  const revAddBtn = document.getElementById('add-rev-btn');
+  if (revAddBtn) revAddBtn.style.display = offClock ? 'none' : '';
   // Show/hide outreach vs errands panel
   const outreachPanel = document.getElementById('outreach-panel');
   const errandsPanel  = document.getElementById('errands-panel');
@@ -957,7 +975,7 @@ async function addItem() {
     estimate:     30,
     remission:    false,
     snoozedUntil:     '',
-    revenue:          false,
+    revenue:          addRevenue,
     delegated:        false,
     delegatedTo:      '',
     delegationExpiry: '',
@@ -965,10 +983,12 @@ async function addItem() {
   items.unshift(item);
   document.getElementById('f-name').value = '';
   addStarred = false;
+  addRevenue = false;
   const btn = document.getElementById('add-star-btn');
   btn.style.color       = 'var(--text3)';
   btn.style.borderColor = 'var(--border2)';
   btn.style.background  = 'none';
+  toggleAddRevenue(); toggleAddRevenue(); // reset visual
   flashBtn(document.querySelector('.add-btn'));
   render();
   await apiPost({ action: 'add', item });
@@ -1181,10 +1201,15 @@ async function saveEdit(id) {
   item.cat      = document.getElementById('edit-cat-'  + id).value;
   item.deadline    = document.getElementById('edit-deadline-' + id).value || '';
   item.snoozedUntil    = document.getElementById('edit-snooze-' + id).value || '';
-  const newDelegatedTo = (document.getElementById('edit-delegatedto-' + id).value || '').trim();
+  const newDelegatedTo    = (document.getElementById('edit-delegatedto-' + id).value || '').trim();
+  const newDelegationDate = document.getElementById('edit-delegationexpiry-' + id).value || '';
+  if (newDelegatedTo && !newDelegationDate) {
+    alert('Please set a check-back date when delegating — otherwise it will never come back to you.');
+    return;
+  }
   item.delegatedTo      = newDelegatedTo;
-  item.delegated        = !!newDelegatedTo;
-  item.delegationExpiry = document.getElementById('edit-delegationexpiry-' + id).value || '';
+  item.delegated        = !!(newDelegatedTo && newDelegationDate);
+  item.delegationExpiry = newDelegationDate;
   item.tag     = document.getElementById('edit-tag-'  + id).value;
   // pri already updated in-place via selectPri
   expandedId = null;
@@ -1301,8 +1326,10 @@ function sortItems(arr) {
 function renderTodayView(vis) {
   const PRI_LABELS = { '0':'!! Top priority', '1':'! High priority', '2':'Normal', '3':'↓ Low priority' };
   let html = '';
+  const activeVis  = vis.filter(i => !i.cleared);
+  const clearedVis = vis.filter(i =>  i.cleared);
   ['0','1','2','3'].forEach(p => {
-    const group = vis.filter(i => (i.pri||'2') === p);
+    const group = activeVis.filter(i => (i.pri||'2') === p);
     if (!group.length) return;
     const sorted = group.slice().sort((a,b) => {
       if (a.cleared !== b.cleared) return a.cleared ? 1 : -1;
@@ -1313,6 +1340,10 @@ function renderTodayView(vis) {
     html += `<div class="section-hdr" style="color:var(--text2)">${PRI_LABELS[p]}</div>`;
     sorted.forEach(i => { html += itemHTML(i); });
   });
+  if (clearedVis && clearedVis.length) {
+    html += '<div class="section-hdr" style="color:var(--text3)">✓ Cleared</div>';
+    clearedVis.forEach(i => { html += itemHTML(i); });
+  }
   return html;
 }
 
@@ -1370,8 +1401,8 @@ function render() {
       }
       // After Risk group: Remission, then Delegated panel
       if (k === '1') {
-        html += remissionPanelHTML();
         html += '<div id="delegated-anchor"></div>';
+        html += remissionPanelHTML();
       }
     });
     // All cleared items at the very bottom
@@ -2153,7 +2184,7 @@ function renderOutreach() {
         <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
         <div class="outreach-pri-btns">
           <button class="outreach-pri-btn ${upActive}"   onclick="changeOutreachPri(${o.id},'up',event)">▲</button>
-          <button class="outreach-pri-btn ${downActive}" onclick="changeOutreachPri(${o.id},'down',event)">▼</button>
+          <button class="outreach-pri-btn ${downActive}" onclick="changeOutreachPri(${o.id},'down',event)" style="font-size:11px">▽</button>
         </div>
       </div>
     </div>`;
@@ -2237,11 +2268,12 @@ function autoCheckDelegations() {
   const now = new Date();
   let changed = false;
   items.forEach(i => {
-    if (i.delegated && i.delegationExpiry && new Date(i.delegationExpiry) <= now) {
-      // Delegation expired — recall with star + high priority
+    if (!i.delegated) return;
+    const shouldRecall = !i.delegationExpiry || new Date(i.delegationExpiry + 'T12:00:00') <= now;
+    if (shouldRecall) {
       i.delegated = false;
       i.starred   = true;
-      i.pri       = '1'; // ! High priority
+      i.pri       = '1';
       changed     = true;
       apiPost({ action: 'update', item: i });
     }
