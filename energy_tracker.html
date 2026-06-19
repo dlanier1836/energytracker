@@ -1360,7 +1360,6 @@ function render() {
     // Separate cleared from active — cleared pool at very bottom
     const activeVis  = vis.filter(i => !i.cleared);
     const clearedVis = vis.filter(i =>  i.cleared);
-    html += '<div id="delegated-anchor"></div>';
     // Group active by category
     CAT_ORDER.forEach(k => {
       const group = activeVis.filter(i => i.cat === k);
@@ -1369,9 +1368,10 @@ function render() {
         html += `<div class="section-hdr"><span class="dot ${c.dot}"></span>${c.label}</div>`;
         sortItems(group).forEach(i => { html += itemHTML(i); });
       }
-      // After Risk group, inject Risks in Remission then Delegated panel
+      // After Risk group: Remission, then Delegated panel
       if (k === '1') {
         html += remissionPanelHTML();
+        html += '<div id="delegated-anchor"></div>';
       }
     });
     // All cleared items at the very bottom
@@ -2266,16 +2266,10 @@ function delegatedPanelHTML() {
     const delegationLine = (i.delegatedTo ? '→ ' + i.delegatedTo : '') + expiryText;
     // Modify the item to show delegation info in its meta
     const augmented = Object.assign({}, i, { _delegationLine: delegationLine });
-    const card = itemHTML(i);
-    // Inject delegation line after item-meta div
     const recall = '<button class="delegated-recall" onclick="event.stopPropagation();recallDelegated(' + i.id + ')">↑ Recall</button>';
-    // Add delegation info + recall as a footer bar on the card
-    const footer = delegationLine
-      ? '<div style="padding:4px 12px 6px;font-size:11px;color:#185FA5;display:flex;justify-content:space-between;align-items:center">'
-        + '<span>' + delegationLine + '</span>' + recall + '</div>'
-      : '<div style="padding:4px 12px 6px;text-align:right">' + recall + '</div>';
-    // Insert footer before the closing </div> of the item card
-    return card.replace(/(<\/div>)\s*$/, footer + '$1');
+    const footer = '<div style="padding:2px 12px 8px;font-size:11px;color:#185FA5;display:flex;justify-content:space-between;align-items:center">'
+      + '<span>' + delegationLine + '</span>' + recall + '</div>';
+    return itemHTML(i) + footer;
   }).join('');
 
   return `<div class="delegated-panel ${isCollapsed ? 'collapsed' : ''}" id="delegated-panel-inline" onclick="if(event.target===this||event.target.closest('.delegated-hdr'))toggleDelegated()">
