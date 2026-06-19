@@ -340,6 +340,10 @@
   .cal-btn:hover { color: #185FA5; background: #E6F1FB; }
   .rev-badge { font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #E0F5EC; color: #1E6B46; flex-shrink: 0; border: 1px solid #3A9E6C; line-height: 1.4; }
   html.dark .rev-badge { background: transparent; color: #6ee7b7; border-color: #6ee7b7; box-shadow: 0 0 4px #6ee7b744; }
+  .rev-btn { background: none; border: none; cursor: pointer; font-size: 13px; font-weight: 700; padding: 2px 5px; border-radius: 4px; flex-shrink: 0; color: var(--text3); line-height: 1; }
+  .rev-btn.on { color: #3A9E6C; }
+  .rev-btn:hover { background: var(--bg2); }
+  html.dark .rev-badge { background: transparent; color: #6ee7b7; border-color: #6ee7b7; box-shadow: 0 0 4px #6ee7b744; }
   /* Delegated panel */
   .delegated-panel { border-radius: var(--radius-lg); border: 1.5px solid #2A44A0; margin-bottom: 6px; overflow: hidden; background: var(--bg); }
   .delegated-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #E8EFFE; border-bottom: 0.5px solid #b5c8f4; cursor: pointer; user-select: none; }
@@ -604,6 +608,7 @@
         <button class="outreach-type-btn"        id="otype-call"     onclick="setOutreachType('call')">Calls</button>
         <button class="outreach-type-btn"        id="otype-email"    onclick="setOutreachType('email')">Emails</button>
         <button class="outreach-type-btn"        id="otype-linkedin" onclick="setOutreachType('linkedin')">LinkedIn</button>
+        <button class="outreach-type-btn" id="otype-sort" onclick="toggleOutreachSort()" title="Toggle sort order" style="margin-left:6px">A↓</button>
       </div>
       <i class="ti ti-chevron-down outreach-chevron" aria-hidden="true"></i>
     </div>
@@ -1534,6 +1539,15 @@ let outreachItems = [];
 let outreachTypeFilter = 'all';
 let outreachCollapsed = false;
 let outreachAddStarred = false;
+let outreachSortMode = 'priority'; // 'priority' or 'alpha'
+
+function toggleOutreachSort() {
+  outreachSortMode = outreachSortMode === 'priority' ? 'alpha' : 'priority';
+  const btn = document.getElementById('otype-sort');
+  if (btn) btn.textContent = outreachSortMode === 'alpha' ? 'Pri↓' : 'A↓';
+  window._outreachPage = 0;
+  renderOutreach();
+}
 
 function toggleOutreachAddStar() {
   outreachAddStarred = !outreachAddStarred;
@@ -1564,6 +1578,7 @@ function normalizeOutreach(r) {
     added:    (r.added || '').slice(0,10),
     lastPinged:   r.lastPinged   || '',
     snoozedUntil: /\d{4}-\d{2}-\d{2}/.test(r.snoozedUntil || '') ? r.snoozedUntil.slice(0,10) : '',
+    revenue:      r.revenue === true || String(r.revenue).toUpperCase() === 'TRUE',
   };
 }
 
@@ -1611,6 +1626,18 @@ async function addOutreach() {
   if (!raw) return;
   const type = document.getElementById('o-type').value;
   const names = raw.split(/[,\u000a]+/).map(s => s.trim()).filter(Boolean);
+  // Dupe check
+  const existing = outreachItems.map(o => o.name.toLowerCase());
+  const dupes = names.filter(n => existing.includes(n.toLowerCase()));
+  if (dupes.length) {
+    const msg = dupes.length === 1
+      ? '"' + dupes[0] + '" is already in your contacts. Add anyway?'
+      : dupes.join(', ') + ' are already in your contacts. Add anyway?';
+    if (!confirm(msg)) return;
+  }
+  // Disable Add button briefly
+  const addBtn = document.querySelector('.outreach-add button');
+  if (addBtn) { addBtn.disabled = true; addBtn.textContent = 'Adding…'; }
   for (const name of names) {
     const item = { id: Date.now() + Math.random(), name, type, cat:'3', pri:'2', starred:outreachAddStarred, done:false, archived:false, added: new Date().toISOString().slice(0,10) };
     item.id = Math.floor(item.id);
@@ -1620,7 +1647,9 @@ async function addOutreach() {
   document.getElementById('o-name').value = '';
   outreachAddStarred = false;
   toggleOutreachAddStar();
-  flashBtn(document.querySelector('.outreach-add button'));
+  const addBtn2 = document.querySelector('.outreach-add button');
+  if (addBtn2) { addBtn2.disabled = false; addBtn2.textContent = 'Add'; }
+  flashBtn(addBtn2);
   renderOutreach();
 }
 
@@ -1639,6 +1668,15 @@ async function cycleOutreachCat(id, e) {
   if (!o) return;
   const idx = O_CAT_CYCLE.indexOf(o.cat);
   o.cat = O_CAT_CYCLE[(idx + 1) % O_CAT_CYCLE.length];
+  renderOutreach();
+  await outreachPost({ action: 'updateOutreach', item: o });
+}
+
+async function toggleOutreachRevenue(id, e) {
+  e.stopPropagation();
+  const o = outreachItems.find(x => x.id === id);
+  if (!o) return;
+  o.revenue = !o.revenue;
   renderOutreach();
   await outreachPost({ action: 'updateOutreach', item: o });
 }
@@ -1910,8 +1948,9 @@ function renderOutreach() {
   document.getElementById('outreach-done-count').textContent = doneCount > 0 ? doneCount + ' done today' : '';
   document.getElementById('outreach-archive-btn').style.display = done.length > 0 ? 'inline-block' : 'none';
 
-  // Sort: starred first, then by pri, then active before done
+  // Sort: alpha or priority
   const sorted = [...vis].sort((a, b) => {
+    if (outreachSortMode === 'alpha') return a.name.localeCompare(b.name);
     if (a.done !== b.done) return a.done ? 1 : -1;
     if (a.starred !== b.starred) return a.starred ? -1 : 1;
     return parseInt(a.pri||'2') - parseInt(b.pri||'2');
@@ -1950,7 +1989,7 @@ function renderOutreach() {
         <div class="e-dot ${dotCls}" onclick="cycleOutreachCat(${o.id}, event)" title="Tap to set energy type"></div>
         <i class="ti ${typeIcon} outreach-icon" onclick="cycleOutreachType(${o.id}, event)" style="cursor:pointer" title="Tap to change type (${typeTitle})" aria-hidden="true"></i>
         <div class="outreach-name-wrap" style="flex:1;min-width:0;overflow:hidden">
-          <span class="outreach-name ${o.done ? 'done' : ''}" id="oname-${o.id}" onclick="editOutreachName(${o.id}, event)" title="Tap to edit" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.name}</span>
+          <span class="outreach-name ${o.done ? 'done' : ''}" id="oname-${o.id}" onclick="editOutreachName(${o.id}, event)" title="Tap to edit" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.name}${o.revenue ? ' <span class=\"rev-badge\" title=\"Revenue contact\">$</span>' : ''}</span>
           ${o.lastPinged ? `<span class="ping-ago" onclick="setPingDate(${o.id}, event)" title="Tap to change date" style="display:block;margin-top:1px">${formatPingAgo(o.lastPinged)}</span>` : ''}
           ${o.snoozedUntil && new Date(o.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5;display:block;margin-top:1px">💤 until ${new Date(o.snoozedUntil).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
         </div>
@@ -1959,6 +1998,7 @@ function renderOutreach() {
       <div class="outreach-row-bottom">
         <button class="ping-btn" onclick="pingOutreach(${o.id}, event)" title="Log a ping">ping</button>
         <button class="snooze-btn" onclick="snoozeOutreach(${o.id}, event)" title="Snooze contact">💤</button>
+        <button class="rev-btn ${o.revenue ? 'on' : ''}" onclick="toggleOutreachRevenue(${o.id}, event)" title="${o.revenue ? 'Revenue contact' : 'Mark as revenue'}">$</button>
         ${priBadgeOrSpace}
         <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today">★</button>
         <div class="outreach-pri-btns">
