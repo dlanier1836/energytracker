@@ -683,14 +683,19 @@
         Errands
         <span class="errands-count" id="errands-count">0 remaining</span>
       </div>
+      <div class="outreach-type-toggle" onclick="event.stopPropagation()">
+        <button class="outreach-type-btn errands-type-btn active" data-type="all"      onclick="setErrandsType('all')">All</button>
+        <button class="outreach-type-btn errands-type-btn"        data-type="errand"   onclick="setErrandsType('errand')"><i class="ti ti-car"></i> Errands</button>
+        <button class="outreach-type-btn errands-type-btn"        data-type="shopping" onclick="setErrandsType('shopping')"><i class="ti ti-shopping-cart"></i> Shopping</button>
+      </div>
       <i class="ti ti-chevron-down errands-chevron" aria-hidden="true"></i>
     </div>
     <div class="errands-body">
       <div class="errands-add">
         <input type="text" id="e-name" placeholder="Add errands or shopping, comma-separated…" />
         <select id="e-type" style="padding:6px 8px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
-          <option value="errand">🚗 Errand</option>
-          <option value="shopping">🛒 Shopping</option>
+          <option value="errand">Errand</option>
+          <option value="shopping">Shopping</option>
         </select>
         <button onclick="addErrands()">Add</button>
       </div>
@@ -2436,6 +2441,22 @@ function renderRemission() {
 
 // ── Errands ──────────────────────────────────────────────
 let errandsItems = [];
+let errandsTypeFilter = 'all';
+
+function setErrandsType(type) {
+  errandsTypeFilter = type;
+  document.querySelectorAll('.errands-type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+  renderErrands();
+}
+
+async function cycleErrandType(id, e) {
+  e.stopPropagation();
+  const o = errandsItems.find(x => x.id === id);
+  if (!o) return;
+  o.type = o.type === 'errand' ? 'shopping' : 'errand';
+  renderErrands();
+  await errandsPost({ action: 'updateErrand', item: o });
+}
 let errandsCollapsed = false;
 
 function normalizeErrand(r) {
@@ -2573,14 +2594,18 @@ function renderErrands() {
   document.getElementById('errands-done-count').textContent = done.length > 0 ? done.length + ' done today' : '';
   document.getElementById('errands-archive-btn').style.display = done.length > 0 ? 'inline-block' : 'none';
 
-  const sorted = [...errandsItems].sort((a,b) => {
+  const vis = errandsTypeFilter === 'all'
+    ? errandsItems
+    : errandsItems.filter(o => o.type === errandsTypeFilter);
+
+  const sorted = [...vis].sort((a,b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
     if (a.starred !== b.starred) return a.starred ? -1 : 1;
     return parseInt(a.pri||'2') - parseInt(b.pri||'2');
   });
 
   if (!sorted.length) {
-    document.getElementById('errands-list').innerHTML = '<div class="errands-empty">No errands yet — add above</div>';
+    document.getElementById('errands-list').innerHTML = '<div class="errands-empty">' + (errandsTypeFilter === 'all' ? 'No errands yet — add above' : 'No ' + errandsTypeFilter + ' items') + '</div>';
     return;
   }
 
@@ -2594,7 +2619,9 @@ function renderErrands() {
       <div class="errands-chk ${o.done ? 'done' : ''}" onclick="toggleErrandDone(${o.id}, event)">
         ${o.done ? '<i class="ti ti-check"></i>' : ''}
       </div>
-      <span style="font-size:14px;flex-shrink:0">${o.type === 'shopping' ? '🛒' : '🚗'}</span>
+      <span style="font-size:15px;flex-shrink:0;cursor:pointer;color:var(--text2)" onclick="cycleErrandType(${o.id}, event)" title="Tap to change type">
+        <i class="${o.type === 'shopping' ? 'ti ti-shopping-cart' : 'ti ti-car'}"></i>
+      </span>
       <span class="errands-name ${o.done ? 'done' : ''}" id="ename-${o.id}" onclick="editErrandName(${o.id}, event)">${o.name}</span>
       ${priBadge}
       <button class="errands-star ${o.starred ? 'on' : ''}" onclick="toggleErrandStar(${o.id}, event)" title="Star for today">★</button>
