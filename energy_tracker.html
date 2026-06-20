@@ -1269,6 +1269,7 @@ function togglePill(pill) {
   updateFilterUI();
   render();
   renderOutreach();
+  if (offClock) renderErrands();
 }
 
 function setStatFilter(cat) {
@@ -2594,9 +2595,12 @@ function renderErrands() {
   document.getElementById('errands-done-count').textContent = done.length > 0 ? done.length + ' done today' : '';
   document.getElementById('errands-archive-btn').style.display = done.length > 0 ? 'inline-block' : 'none';
 
-  const vis = errandsTypeFilter === 'all'
-    ? errandsItems
-    : errandsItems.filter(o => o.type === errandsTypeFilter);
+  const todayActive = activePills.has('starred');
+  const vis = errandsItems.filter(o => {
+    if (errandsTypeFilter !== 'all' && o.type !== errandsTypeFilter) return false;
+    if (todayActive && !o.starred) return false;
+    return true;
+  });
 
   const sorted = [...vis].sort((a,b) => {
     if (a.done !== b.done) return a.done ? 1 : -1;
