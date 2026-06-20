@@ -1286,7 +1286,13 @@ function updateFilterUI() {
     el.classList.toggle('active-stat', el.id === 'stat-' + catFilter);
   });
   const todayBtn = document.getElementById('today-hdr-btn');
-  if (todayBtn) todayBtn.classList.toggle('active', activePills.has('starred'));
+  if (todayBtn) {
+    const isToday = activePills.has('starred');
+    todayBtn.classList.toggle('active', isToday);
+    todayBtn.style.color       = isToday ? '#f59e0b' : '';
+    todayBtn.style.borderColor = isToday ? '#f59e0b' : '';
+    todayBtn.style.background  = isToday ? '#FEF9EE' : '';
+  }
 }
 
 function visible() {
@@ -1393,8 +1399,10 @@ function render() {
   document.getElementById('stats').innerHTML = CAT_ORDER.map(k => {
     const c = CATS[k];
     const zeroRisk = k === '1' && counts[k] === 0;
-    const extraStyle = zeroRisk ? 'border-color:#3A9E6C!important' : '';
-    const numStyle   = zeroRisk ? 'color:#3A9E6C!important' : '';
+    const extraStyle = zeroRisk
+      ? 'background:#F0FBF5!important;border-color:#3A9E6C!important'
+      : '';
+    const numStyle = zeroRisk ? 'color:#1E6B46!important' : '';
     return `<div class="stat ${c.statCls} ${catFilter===k ? 'active-stat' : ''}" id="stat-${k}"
       onclick="setStatFilter('${k}')" role="button" tabindex="0"
       onkeydown="if(event.key==='Enter')setStatFilter('${k}')" style="${extraStyle}">
@@ -2586,6 +2594,7 @@ function renderErrands() {
       <div class="errands-chk ${o.done ? 'done' : ''}" onclick="toggleErrandDone(${o.id}, event)">
         ${o.done ? '<i class="ti ti-check"></i>' : ''}
       </div>
+      <span style="font-size:14px;flex-shrink:0">${o.type === 'shopping' ? '🛒' : '🚗'}</span>
       <span class="errands-name ${o.done ? 'done' : ''}" id="ename-${o.id}" onclick="editErrandName(${o.id}, event)">${o.name}</span>
       ${priBadge}
       <button class="errands-star ${o.starred ? 'on' : ''}" onclick="toggleErrandStar(${o.id}, event)" title="Star for today">★</button>
