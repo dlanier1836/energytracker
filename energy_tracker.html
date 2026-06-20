@@ -62,9 +62,9 @@
   .h1-right { margin-left: auto; }
   .theme-btn { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 20px; padding: 2px 4px; border-radius: 6px; display: flex; align-items: center; }
   .theme-btn:hover { color: var(--text); background: var(--bg2); }
-  .today-hdr-btn { background: none; border: none; cursor: pointer; font-size: 20px; padding: 2px 5px; border-radius: 6px; color: var(--text3); transition: all .15s; line-height: 1; }
-  .today-hdr-btn:hover { color: #f59e0b; background: var(--bg2); }
-  .today-hdr-btn.active { color: #f59e0b; }
+  .today-hdr-btn { background: none; border: 1px solid var(--border); cursor: pointer; font-size: 20px; padding: 2px 5px; border-radius: 6px; color: var(--text3); transition: all .15s; line-height: 1; }
+  .today-hdr-btn:hover { color: #f59e0b; background: var(--bg2); border-color: #f59e0b; }
+  .today-hdr-btn.active { color: #f59e0b; border-color: #f59e0b; background: #FEF9EE; }
   .clock-btn { background: none; border: none; cursor: pointer; font-size: 18px; padding: 2px 6px; border-radius: 6px; display: flex; align-items: center; transition: background .15s; }
   .clock-btn:hover { background: var(--bg2); }
   .clock-btn.off-clock { background: #E0F5EC; border-radius: 6px; }
@@ -360,6 +360,7 @@
   .delegated-panel.collapsed .delegated-body { display: none; }
   .delegated-body { padding: 6px 8px 8px; }
   .delegated-recall { background: none; border: 0.5px solid #2A44A0; color: #2A44A0; font-size: 11px; padding: 2px 8px; border-radius: 20px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+  .recur-badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: var(--bg2); color: var(--text3); border: 0.5px solid var(--border); flex-shrink: 0; }
   html.dark .delegated-recall { border-color: #93c5fd; color: #93c5fd; }
   .delegated-recall:hover { background: #E8EFFE; }
   html.dark .delegated-recall:hover { background: #121a2a; }
@@ -686,7 +687,11 @@
     </div>
     <div class="errands-body">
       <div class="errands-add">
-        <input type="text" id="e-name" placeholder="Add errands, comma-separated…" />
+        <input type="text" id="e-name" placeholder="Add errands or shopping, comma-separated…" />
+        <select id="e-type" style="padding:6px 8px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--bg);color:var(--text);font-size:13px">
+          <option value="errand">🚗 Errand</option>
+          <option value="shopping">🛒 Shopping</option>
+        </select>
         <button onclick="addErrands()">Add</button>
       </div>
       <div class="errands-list" id="errands-list"></div>
@@ -887,6 +892,8 @@ function normalize(r) {
     delegated:    r.delegated    === true || String(r.delegated).toUpperCase()    === 'TRUE',
     delegatedTo:  r.delegatedTo  || '',
     delegationExpiry: /\d{4}-\d{2}-\d{2}/.test(r.delegationExpiry || '') ? String(r.delegationExpiry).slice(0,10) : '',
+    recurring:     r.recurring     || '',
+    lastCompleted: r.lastCompleted ? String(r.lastCompleted).slice(0,10) : '',
   };
 }
 
@@ -979,6 +986,8 @@ async function addItem() {
     delegated:        false,
     delegatedTo:      '',
     delegationExpiry: '',
+    recurring:        '',
+    lastCompleted:    '',
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
@@ -999,6 +1008,23 @@ async function toggle(id, e) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   item.cleared = !item.cleared;
+  // Auto-reset recurring tasks
+  if (item.cleared && item.recurring) {
+    item.lastCompleted = new Date().toISOString().slice(0,10);
+    // Schedule the reset based on frequency
+    const delay = item.recurring === 'daily'   ? 1
+                : item.recurring === 'weekly'  ? 7
+                : item.recurring === 'monthly' ? 30
+                : 0;
+    if (delay > 0) {
+      const resetDate = new Date();
+      resetDate.setDate(resetDate.getDate() + delay);
+      item.snoozedUntil = resetDate.toISOString().slice(0,10);
+    }
+  } else if (!item.cleared && item.recurring && item.snoozedUntil) {
+    // Un-clearing a recurring task — restore it
+    item.snoozedUntil = '';
+  }
   render();
   await apiPost({ action: 'update', item });
 }
@@ -1201,6 +1227,7 @@ async function saveEdit(id) {
   item.cat      = document.getElementById('edit-cat-'  + id).value;
   item.deadline    = document.getElementById('edit-deadline-' + id).value || '';
   item.snoozedUntil    = document.getElementById('edit-snooze-' + id).value || '';
+  item.recurring       = document.getElementById('edit-recurring-' + id).value || '';
   const newDelegatedTo    = (document.getElementById('edit-delegatedto-' + id).value || '').trim();
   const newDelegationDate = document.getElementById('edit-delegationexpiry-' + id).value || '';
   if (newDelegatedTo && !newDelegationDate) {
@@ -1365,11 +1392,14 @@ function render() {
   if (archiveBtn) archiveBtn.style.display = items.some(i => i.cleared) ? 'inline-block' : 'none';
   document.getElementById('stats').innerHTML = CAT_ORDER.map(k => {
     const c = CATS[k];
+    const zeroRisk = k === '1' && counts[k] === 0;
+    const extraStyle = zeroRisk ? 'border-color:#3A9E6C!important' : '';
+    const numStyle   = zeroRisk ? 'color:#3A9E6C!important' : '';
     return `<div class="stat ${c.statCls} ${catFilter===k ? 'active-stat' : ''}" id="stat-${k}"
       onclick="setStatFilter('${k}')" role="button" tabindex="0"
-      onkeydown="if(event.key==='Enter')setStatFilter('${k}')">
-      <div class="stat-num">${counts[k]}</div>
-      <div class="stat-lbl">${c.short}</div>
+      onkeydown="if(event.key==='Enter')setStatFilter('${k}')" style="${extraStyle}">
+      <div class="stat-num" style="${numStyle}">${counts[k]}</div>
+      <div class="stat-lbl" style="${numStyle}">${c.short}</div>
     </div>`;
   }).join('');
 
@@ -1508,6 +1538,13 @@ function itemHTML(i) {
         </select>
       </div>
     </div>
+    <div class="edit-label" style="margin-top:8px">Recurring <span style="font-weight:400;text-transform:none;font-size:11px">(auto-resets when cleared)</span></div>
+    <select class="edit-field" id="edit-recurring-${i.id}" style="margin-bottom:8px">
+      <option value=""   ${!i.recurring              ?'selected':''}>Not recurring</option>
+      <option value="daily"   ${ i.recurring==='daily'   ?'selected':''}>Daily</option>
+      <option value="weekly"  ${ i.recurring==='weekly'  ?'selected':''}>Weekly</option>
+      <option value="monthly" ${ i.recurring==='monthly' ?'selected':''}>Monthly</option>
+    </select>
     <div class="edit-label" style="margin-top:8px">Delegated to <span style="font-weight:400;text-transform:none;font-size:11px">(optional — moves task to Delegated panel)</span></div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
       <input class="edit-field" type="text" id="edit-delegatedto-${i.id}" value="${i.delegatedTo || ''}" placeholder="Person's name…" style="margin-bottom:0;flex:1" />
@@ -1521,14 +1558,14 @@ function itemHTML(i) {
       }).join('')}
     </div>
 
-    <div class="edit-label">Revenue impact</div>
+    ${!offClock ? `<div class="edit-label">Revenue impact</div>
     <div style="margin-bottom:8px">
       <button id="edit-revenue-${i.id}" onclick="toggleRevenueEdit(${i.id})"
         class="${i.revenue ? 'remission-restore-btn' : 'snooze-btn'}"
         style="font-size:12px">
         ${i.revenue ? '$ Revenue item — tap to unmark' : '$ Mark as revenue impact'}
       </button>
-    </div>
+    </div>` : ''}
     <div class="edit-label">Snooze until <span style="font-weight:400;text-transform:none;font-size:11px">(optional — hides until date, still searchable)</span></div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
       <input class="snooze-input edit-field" type="date" id="edit-snooze-${i.id}" value="${i.snoozedUntil || ''}" style="margin-bottom:0;flex:1" />
@@ -1555,6 +1592,7 @@ function itemHTML(i) {
         <div class="item-name ${i.cleared ? 'cleared' : ''}">${i.name}</div>
         <div class="item-meta">
           <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}" style="text-transform:none;letter-spacing:0">${i.tag === 'work' ? 'Work' : 'Personal'}</span>
+          ${i.recurring ? `<span class="recur-badge">🔁 ${i.recurring}</span>` : ''}
           ${deadlineHTML(i)}
           ${i.snoozedUntil && new Date(i.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5">💤 until ${new Date(i.snoozedUntil).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
           ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
@@ -2402,6 +2440,7 @@ function normalizeErrand(r) {
     archived:   r.archived  === true || String(r.archived).toUpperCase()  === 'TRUE',
     archivedAt: r.archivedAt || '',
     added:    (r.added || '').slice(0,10),
+    type:     r.type || 'errand',
   };
 }
 
@@ -2440,7 +2479,8 @@ async function addErrands() {
   if (!raw) return;
   const names = raw.split(/[,\u000a]+/).map(s => s.trim()).filter(Boolean);
   for (const name of names) {
-    const item = { id: Math.floor(Date.now() + Math.random()*1000), name, pri:'2', starred:false, done:false, archived:false, added: new Date().toISOString().slice(0,10) };
+    const etype = document.getElementById('e-type') ? document.getElementById('e-type').value : 'errand';
+    const item = { id: Math.floor(Date.now() + Math.random()*1000), name, pri:'2', starred:false, done:false, archived:false, added: new Date().toISOString().slice(0,10), type: etype };
     errandsItems.unshift(item);
     await errandsPost({ action: 'addErrand', item });
   }
@@ -2676,10 +2716,11 @@ async function setEstimate(id, val) {
 }
 
 function updateLoadCounter() {
-  const starred = items.filter(i => i.starred && !i.cleared);
-  const totalMins = starred.reduce((s, i) => s + (i.estimate || 30), 0);
   const el = document.getElementById('load-counter');
   if (!el) return;
+  if (offClock) { el.style.display = 'none'; return; }
+  const starred = items.filter(i => i.starred && !i.cleared);
+  const totalMins = starred.reduce((s, i) => s + (i.estimate || 30), 0);
   if (totalMins === 0) { el.style.display = 'none'; return; }
   const h = Math.floor(totalMins / 60), m = totalMins % 60;
   const label = (h > 0 ? h + 'h ' : '') + (m > 0 ? m + 'm' : '');
