@@ -819,16 +819,24 @@ initTheme();
 // ── Clock mode ────────────────────────────────────────────
 function toggleTodayHeader() {
   if (activePills.has('starred')) {
-    // turn off — go back to all
     activePills = new Set(['all']);
   } else {
     activePills = new Set(['starred']);
+  }
+  // Update button immediately before any re-render
+  const btn = document.getElementById('today-hdr-btn');
+  const isOn = activePills.has('starred');
+  if (btn) {
+    btn.classList.toggle('active', isOn);
+    btn.style.color       = isOn ? '#f59e0b' : '';
+    btn.style.borderColor = isOn ? '#f59e0b' : '';
+    btn.style.background  = isOn ? '#FEF9EE' : '';
   }
   updateFilterUI();
   updateLoadCounter();
   render();
   renderOutreach();
-  document.getElementById('today-hdr-btn').classList.toggle('active', activePills.has('starred'));
+  renderErrands();
 }
 
 function toggleClock() {
