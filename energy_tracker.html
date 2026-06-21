@@ -1442,7 +1442,7 @@ function render() {
   }).forEach(i => { if (counts[i.cat] !== undefined) counts[i.cat]++; });
   // Show archive-all button only when cleared items exist
   const archiveBtn = document.getElementById('archive-all-btn');
-  if (archiveBtn) archiveBtn.style.display = items.some(i => i.cleared) ? 'inline-block' : 'none';
+  if (archiveBtn) archiveBtn.style.display = (items.some(i => i.cleared) || archivedOutreachItems.length > 0) ? 'inline-block' : 'none';
   document.getElementById('stats').innerHTML = CAT_ORDER.map(k => {
     const c = CATS[k];
     const zeroRisk = k === '1' && counts[k] === 0;
@@ -2709,7 +2709,7 @@ function renderErrands() {
       </span>
       <div style="flex:1;min-width:0">
         <span class="errands-name ${o.done ? 'done' : ''}" id="ename-${o.id}" onclick="editErrandName(${o.id}, event)">${o.name}</span>
-        ${o.note ? `<span style="display:block;font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.note}</span>` : ''}
+        ${o.note ? `<span style="display:block;font-size:11px;color:var(--text3)">${linkifyNote(o.note)}</span>` : ''}
       </div>
       ${priBadge}
       <button class="errands-star ${o.starred ? 'on' : ''}" onclick="toggleErrandStar(${o.id}, event)" title="Star for today">★</button>
@@ -2934,6 +2934,16 @@ async function clearContactSnooze(id) {
   renderOutreach();
   renderSnoozedPanel();
   await outreachPost({ action: 'updateOutreach', item: o });
+}
+
+// ── Linkify notes ─────────────────────────────────────────
+function linkifyNote(text) {
+  if (!text) return '';
+  const urlRegex = /https?:\/\/[^\s<>"{}|\^`\[\]]+/g;
+  return text.replace(urlRegex, function(url) {
+    const display = url.length > 60 ? url.slice(0,57) + '...' : url;
+    return '<a href="' + url + '" target="_blank" rel="noopener" style="color:#185FA5;word-break:break-all" onclick="event.stopPropagation()">' + display + '</a>';
+  });
 }
 
 // ── Schedule to calendar ──────────────────────────────────
