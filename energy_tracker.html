@@ -673,6 +673,7 @@
         <span class="outreach-done-count" id="outreach-done-count"></span>
         <button class="outreach-archive-btn" id="outreach-archive-btn" onclick="archiveOutreach()" style="display:none">Archive done</button>
       </div>
+      <div id="outreach-archived-bucket"></div>
     </div>
   </div>
 
@@ -1804,6 +1805,7 @@ function updatePomoBar() {
 
 // ── Outreach ──────────────────────────────────────────────
 let outreachItems = [];
+let archivedOutreachItems = [];
 let outreachTypeFilter = 'all';
 let outreachCollapsed = false;
 let outreachAddStarred = false;
@@ -1858,7 +1860,9 @@ async function loadOutreach() {
     if (!res.ok) return;
     const data = await res.json();
     const arr = Array.isArray(data) ? data : (data.items || []);
-    outreachItems = arr.map(normalizeOutreach).filter(o => !o.archived);
+    const allOutreach = arr.map(normalizeOutreach);
+    outreachItems = allOutreach.filter(o => !o.archived);
+    archivedOutreachItems = allOutreach.filter(o => o.archived);
     autoStarUnsnoozedOutreach();
     localStorage.setItem('outreachCache', JSON.stringify(outreachItems));
     renderOutreach();
@@ -2101,11 +2105,42 @@ async function deleteOutreach(id, e) {
 async function archiveOutreach() {
   const toArchive = outreachItems.filter(o => o.done);
   toArchive.forEach(o => { o.archived = true; });
+  archivedOutreachItems = [...toArchive, ...archivedOutreachItems];
   outreachItems = outreachItems.filter(o => !o.done);
   renderOutreach();
+  renderArchivedOutreachPanel();
   for (const o of toArchive) {
     await outreachPost({ action: 'updateOutreach', item: o });
   }
+}
+
+async function restoreOutreach(id) {
+  const o = archivedOutreachItems.find(x => x.id === id);
+  if (!o) return;
+  o.archived = false;
+  o.done     = false;
+  archivedOutreachItems = archivedOutreachItems.filter(x => x.id !== id);
+  outreachItems.unshift(o);
+  renderOutreach();
+  renderArchivedOutreachPanel();
+  await outreachPost({ action: 'updateOutreach', item: o });
+}
+
+function renderArchivedOutreachPanel() {
+  const el = document.getElementById('outreach-archived-bucket');
+  if (!el) return;
+  if (!archivedOutreachItems.length) { el.innerHTML = ''; return; }
+  const rows = archivedOutreachItems.map(o =>
+    '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px">'
+    + '<i class="ti ti-user" style="font-size:13px;color:var(--text3);flex-shrink:0"></i>'
+    + '<span style="flex:1;font-size:13px;color:var(--text2);text-decoration:line-through;opacity:.7">' + o.name + '</span>'
+    + '<button class="remission-restore-btn" onclick="restoreOutreach(' + o.id + ')">↑ Restore</button>'
+    + '</div>'
+  ).join('');
+  el.innerHTML = '<div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);margin-top:6px;overflow:hidden">'
+    + '<div style="padding:6px 14px;background:var(--bg2);font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">'
+    + '<i class="ti ti-archive" style="font-size:12px"></i> Archived contacts (' + archivedOutreachItems.length + ')</div>'
+    + '<div style="padding:4px 6px 6px">' + rows + '</div></div>';
 }
 
 function autoStarUnsnoozedOutreach() {
@@ -2296,6 +2331,7 @@ function renderOutreach() {
   // Also re-render task list so Today filter picks up outreach stars
   if (activePills.has('starred') || activePills.has('prioritized')) render();
   renderSnoozedPanel();
+  renderArchivedOutreachPanel();
 }
 
 // Return outreach items visible in current task filter (for Today / Prioritized views)
@@ -2876,7 +2912,8 @@ async function clearItemSnooze(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   item.snoozedUntil = '';
-  item.starred = true;
+  item.starred  = true;
+  item.cleared  = false;
   render();
   await apiPost({ action: 'update', item });
 }
