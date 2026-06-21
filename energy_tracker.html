@@ -669,10 +669,7 @@
       </div>
       <div class="outreach-list" id="outreach-list"></div>
       <div id="outreach-pagination" style="display:none;align-items:center;gap:8px;padding:4px 14px 6px;flex-wrap:wrap"></div>
-      <div class="outreach-footer">
-        <span class="outreach-done-count" id="outreach-done-count"></span>
-        <button class="outreach-archive-btn" id="outreach-archive-btn" onclick="archiveOutreach()" style="display:none">Archive done</button>
-      </div>
+      <div id="outreach-done-bucket"></div>
       <div id="outreach-archived-bucket"></div>
     </div>
   </div>
@@ -1927,7 +1924,7 @@ async function addOutreach() {
 }
 
 async function toggleOutreachDone(id, e) {
-  e.stopPropagation();
+  if (e) e.stopPropagation();
   const o = outreachItems.find(x => x.id === id);
   if (!o) return;
   o.done = !o.done;
@@ -2114,6 +2111,26 @@ async function archiveOutreach() {
   }
 }
 
+function renderOutreachDoneBucket() {
+  const el = document.getElementById('outreach-done-bucket');
+  if (!el) return;
+  const done = outreachItems.filter(o => o.done);
+  if (!done.length) { el.innerHTML = ''; return; }
+  const rows = done.map(o =>
+    '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px">'
+    + '<div class="outreach-chk done" onclick="toggleOutreachDone(' + o.id + ',event)"><i class="ti ti-check"></i></div>'
+    + '<i class="ti ti-user" style="font-size:13px;color:var(--text3);flex-shrink:0"></i>'
+    + '<span style="flex:1;font-size:13px;color:var(--text2);text-decoration:line-through;opacity:.7">' + o.name + '</span>'
+    + '</div>'
+  ).join('');
+  el.innerHTML = '<div style="border-top:0.5px solid var(--border);margin-top:6px;padding-top:4px">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px 2px">'
+    + '<span style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">' + done.length + ' done</span>'
+    + '<button class="outreach-archive-btn" onclick="archiveOutreach()">✕ Clear done</button>'
+    + '</div>'
+    + rows + '</div>';
+}
+
 async function restoreOutreach(id) {
   const o = archivedOutreachItems.find(x => x.id === id);
   if (!o) return;
@@ -2251,12 +2268,14 @@ function renderOutreach() {
 
   // Done footer
   const doneCount = done.filter(o => outreachTypeFilter === 'all' || o.type === outreachTypeFilter).length;
-  document.getElementById('outreach-done-count').textContent = doneCount > 0 ? doneCount + ' done today' : '';
-  document.getElementById('outreach-archive-btn').style.display = done.length > 0 ? 'inline-block' : 'none';
+  renderOutreachDoneBucket();
 
   // Sort: alpha or priority
   const sorted = [...vis].sort((a, b) => {
-    if (outreachSortMode === 'alpha') return a.name.localeCompare(b.name);
+    if (outreachSortMode === 'alpha') {
+      if (a.done !== b.done) return a.done ? 1 : -1;
+      return a.name.localeCompare(b.name);
+    }
     if (a.done !== b.done) return a.done ? 1 : -1;
     if (a.starred !== b.starred) return a.starred ? -1 : 1;
     return parseInt(a.pri||'2') - parseInt(b.pri||'2');
