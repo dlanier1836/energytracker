@@ -669,7 +669,6 @@
       </div>
       <div class="outreach-list" id="outreach-list"></div>
       <div id="outreach-pagination" style="display:none;align-items:center;gap:8px;padding:4px 14px 6px;flex-wrap:wrap"></div>
-      <div id="outreach-done-bucket"></div>
       <div id="outreach-archived-bucket"></div>
     </div>
   </div>
@@ -1095,18 +1094,28 @@ async function del(id, e) {
 }
 
 async function archiveAllCleared() {
-  const toArchive = items.filter(i => i.cleared);
-  if (!toArchive.length) return;
+  const clearedTasks = items.filter(i => i.cleared);
+  const archivedContacts = [...archivedOutreachItems];
+  if (!clearedTasks.length && !archivedContacts.length) return;
+  const msg = 'Permanently remove '
+    + (clearedTasks.length ? clearedTasks.length + ' cleared task' + (clearedTasks.length > 1 ? 's' : '') : '')
+    + (clearedTasks.length && archivedContacts.length ? ' and ' : '')
+    + (archivedContacts.length ? archivedContacts.length + ' archived contact' + (archivedContacts.length > 1 ? 's' : '') : '')
+    + '?';
+  if (!confirm(msg)) return;
   const today = new Date().toISOString().slice(0,10);
-  toArchive.forEach(i => { i.archived = true; i.archivedAt = today; });
-  archivedItems = [...toArchive, ...archivedItems];
+  // Archive tasks
+  clearedTasks.forEach(i => { i.archived = true; i.archivedAt = today; });
+  archivedItems = [...clearedTasks, ...archivedItems];
   items = items.filter(i => !i.cleared);
+  // Flush archived contacts
+  archivedOutreachItems = [];
   expandedId = null;
   render();
   renderArchiveBucket();
-  for (const item of toArchive) {
-    await apiPost({ action: 'update', item });
-  }
+  renderArchivedOutreachPanel();
+  for (const item of clearedTasks) await apiPost({ action: 'update', item });
+  for (const o of archivedContacts) await apiPost({ action: 'delete', id: o.id });
 }
 
 async function clearArchive() {
@@ -1927,8 +1936,13 @@ async function toggleOutreachDone(id, e) {
   if (e) e.stopPropagation();
   const o = outreachItems.find(x => x.id === id);
   if (!o) return;
-  o.done = !o.done;
+  // Immediately archive — no done limbo
+  o.done     = true;
+  o.archived = true;
+  archivedOutreachItems.unshift(o);
+  outreachItems = outreachItems.filter(x => x.id !== id);
   renderOutreach();
+  renderArchivedOutreachPanel();
   await outreachPost({ action: 'updateOutreach', item: o });
 }
 
@@ -2099,37 +2113,9 @@ async function deleteOutreach(id, e) {
   await outreachPost({ action: 'deleteOutreach', id });
 }
 
-async function archiveOutreach() {
-  const toArchive = outreachItems.filter(o => o.done);
-  toArchive.forEach(o => { o.archived = true; });
-  archivedOutreachItems = [...toArchive, ...archivedOutreachItems];
-  outreachItems = outreachItems.filter(o => !o.done);
-  renderOutreach();
-  renderArchivedOutreachPanel();
-  for (const o of toArchive) {
-    await outreachPost({ action: 'updateOutreach', item: o });
-  }
-}
 
-function renderOutreachDoneBucket() {
-  const el = document.getElementById('outreach-done-bucket');
-  if (!el) return;
-  const done = outreachItems.filter(o => o.done);
-  if (!done.length) { el.innerHTML = ''; return; }
-  const rows = done.map(o =>
-    '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px">'
-    + '<div class="outreach-chk done" onclick="toggleOutreachDone(' + o.id + ',event)"><i class="ti ti-check"></i></div>'
-    + '<i class="ti ti-user" style="font-size:13px;color:var(--text3);flex-shrink:0"></i>'
-    + '<span style="flex:1;font-size:13px;color:var(--text2);text-decoration:line-through;opacity:.7">' + o.name + '</span>'
-    + '</div>'
-  ).join('');
-  el.innerHTML = '<div style="border-top:0.5px solid var(--border);margin-top:6px;padding-top:4px">'
-    + '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 8px 2px">'
-    + '<span style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">' + done.length + ' done</span>'
-    + '<button class="outreach-archive-btn" onclick="archiveOutreach()">✕ Clear done</button>'
-    + '</div>'
-    + rows + '</div>';
-}
+
+
 
 async function restoreOutreach(id) {
   const o = archivedOutreachItems.find(x => x.id === id);
@@ -2268,7 +2254,6 @@ function renderOutreach() {
 
   // Done footer
   const doneCount = done.filter(o => outreachTypeFilter === 'all' || o.type === outreachTypeFilter).length;
-  renderOutreachDoneBucket();
 
   // Sort: alpha or priority
   const sorted = [...vis].sort((a, b) => {
