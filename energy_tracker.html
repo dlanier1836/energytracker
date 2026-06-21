@@ -2295,6 +2295,7 @@ function renderOutreach() {
 
   // Also re-render task list so Today filter picks up outreach stars
   if (activePills.has('starred') || activePills.has('prioritized')) render();
+  renderSnoozedPanel();
 }
 
 // Return outreach items visible in current task filter (for Today / Prioritized views)
@@ -2347,9 +2348,10 @@ let delegatedCollapsed = true;
 async function recallDelegated(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
-  item.delegated = false;
-  // Keep delegatedTo name for history — just clear the delegated flag
-  if (item.delegationExpiry) item.delegationExpiry = '';
+  item.delegated        = false;
+  item.starred          = true;
+  item.pri              = '1'; // bump to High priority
+  item.delegationExpiry = '';
   render();
   await apiPost({ action: 'update', item });
 }
@@ -2835,24 +2837,39 @@ function renderSnoozedPanel() {
   const el = document.getElementById('snoozed-bucket');
   if (!el) return;
   const now = new Date();
-  const snoozed = items.filter(i => i.snoozedUntil && new Date(i.snoozedUntil) > now && !i.archived);
-  if (!snoozed.length) { el.innerHTML = ''; return; }
+  const snoozedTasks = items.filter(i => i.snoozedUntil && new Date(i.snoozedUntil) > now && !i.archived);
+  const snoozedContacts = outreachItems.filter(o => o.snoozedUntil && new Date(o.snoozedUntil) > now && !o.archived);
+  const total = snoozedTasks.length + snoozedContacts.length;
+  if (!total) { el.innerHTML = ''; return; }
 
-  const rows = snoozed.map(i => {
-    const snoozeDate = new Date(i.snoozedUntil);
-    const label = snoozeDate.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+  const taskRows = snoozedTasks.map(i => {
+    const label = new Date(i.snoozedUntil).toLocaleDateString('en-US', {month:'short', day:'numeric'});
     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--radius)">'
+      + '<i class="ti ti-checkbox" style="font-size:13px;color:var(--text3);flex-shrink:0"></i>'
       + '<span style="flex:1;font-size:13px">' + i.name + '</span>'
       + '<span style="font-size:11px;color:#185FA5">💤 ' + label + '</span>'
       + '<button class="delegated-recall" onclick="clearItemSnooze(' + i.id + ')" style="border-color:#185FA5;color:#185FA5">↑ Wake</button>'
       + '</div>';
   }).join('');
 
+  const contactRows = snoozedContacts.map(o => {
+    const label = new Date(o.snoozedUntil).toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--radius)">'
+      + '<i class="ti ti-user" style="font-size:13px;color:var(--text3);flex-shrink:0"></i>'
+      + '<span style="flex:1;font-size:13px">' + o.name + '</span>'
+      + '<span style="font-size:11px;color:#185FA5">💤 ' + label + '</span>'
+      + '<button class="delegated-recall" onclick="clearContactSnooze(' + o.id + ')" style="border-color:#185FA5;color:#185FA5">↑ Wake</button>'
+      + '</div>';
+  }).join('');
+
   el.innerHTML = '<div class="snoozed-panel ' + (snoozedCollapsed ? 'collapsed' : '') + '" id="snoozed-panel-el">'
     + '<div class="snoozed-hdr" onclick="toggleSnoozedPanel()">'
-    + '<div class="snoozed-hdr-title"><i class="ti ti-moon" style="font-size:13px"></i> Snoozed <span class="snoozed-count">' + snoozed.length + '</span></div>'
+    + '<div class="snoozed-hdr-title"><i class="ti ti-moon" style="font-size:13px"></i> Snoozed <span class="snoozed-count">' + total + '</span></div>'
     + '<i class="ti ti-chevron-down snoozed-chevron"></i></div>'
-    + '<div class="snoozed-body">' + rows + '</div></div>';
+    + '<div class="snoozed-body">'
+    + (snoozedTasks.length ? '<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;padding:4px 8px 2px">Tasks</div>' + taskRows : '')
+    + (snoozedContacts.length ? '<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;padding:4px 8px 2px">Contacts</div>' + contactRows : '')
+    + '</div></div>';
 }
 
 async function clearItemSnooze(id) {
@@ -2862,6 +2879,16 @@ async function clearItemSnooze(id) {
   item.starred = true;
   render();
   await apiPost({ action: 'update', item });
+}
+
+async function clearContactSnooze(id) {
+  const o = outreachItems.find(x => x.id === id);
+  if (!o) return;
+  o.snoozedUntil = '';
+  o.starred = true;
+  renderOutreach();
+  renderSnoozedPanel();
+  await outreachPost({ action: 'updateOutreach', item: o });
 }
 
 // ── Schedule to calendar ──────────────────────────────────
