@@ -429,6 +429,20 @@
   .star-toggle-btn:hover { border-color: #f59e0b; color: #b45309; }
   .star-toggle-btn.starred-on { background: #f59e0b; border-color: #f59e0b; color: #fff; }
 
+  /* Snoozed panel */
+  .snoozed-panel { border-radius: var(--radius-lg); border: 1.5px solid #185FA5; margin-bottom: 6px; overflow: hidden; background: var(--bg); }
+  .snoozed-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #E8EFFE; border-bottom: 0.5px solid #b5c8f4; cursor: pointer; user-select: none; }
+  html.dark .snoozed-hdr { background: #121a2a; border-color: #1e2a4a; }
+  .snoozed-hdr-title { font-size: 12px; font-weight: 600; color: #185FA5; flex: 1; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: .04em; }
+  html.dark .snoozed-hdr-title { color: #93c5fd; }
+  .snoozed-count { font-size: 11px; border: 0.5px solid #185FA5; border-radius: 20px; padding: 1px 8px; color: #185FA5; }
+  html.dark .snoozed-count { border-color: #93c5fd; color: #93c5fd; }
+  .snoozed-chevron { font-size: 15px; color: #185FA5; transition: transform .2s; }
+  html.dark .snoozed-chevron { color: #93c5fd; }
+  .snoozed-panel.collapsed .snoozed-chevron { transform: rotate(-90deg); }
+  .snoozed-panel.collapsed .snoozed-body { display: none; }
+  .snoozed-body { padding: 6px 8px 8px; }
+
   /* Risks in Remission panel */
   .remission-panel { border-radius: var(--radius-lg); border: 1.5px solid #3A9E6C; margin-bottom: 6px; overflow: hidden; background: var(--bg); }
   .remission-hdr { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: #F0FBF5; border-bottom: 0.5px solid #C3EDD6; cursor: pointer; user-select: none; }
@@ -540,7 +554,7 @@
     <i class="ti ti-bolt" style="color:#C47D24"></i> Energy tracker
     <span class="h1-right" style="display:flex;align-items:center;gap:4px">
       <span class="load-counter" id="load-counter" style="display:none"></span>
-      <button class="today-hdr-btn" onclick="toggleTodayHeader()" id="today-hdr-btn" title="Toggle Today view">★</button>
+      <button class="today-hdr-btn" onclick="toggleTodayHeader()" ontouchend="event.preventDefault();toggleTodayHeader()" id="today-hdr-btn" title="Toggle Today view">★</button>
       <button class="clock-btn" onclick="toggleClock()" id="clock-btn" title="Toggle on/off the clock">
         <i id="clock-icon" class="ti ti-calendar-week" aria-hidden="true"></i>
       </button>
@@ -722,6 +736,7 @@
   <div id="list"></div>
   <div id="archive-bucket"></div>
   <div id="reflection-bucket"></div>
+  <div id="snoozed-bucket"></div>
 
 </div>
 
@@ -907,6 +922,7 @@ function normalize(r) {
     delegationExpiry: /\d{4}-\d{2}-\d{2}/.test(r.delegationExpiry || '') ? String(r.delegationExpiry).slice(0,10) : '',
     recurring:     r.recurring     || '',
     lastCompleted: r.lastCompleted ? String(r.lastCompleted).slice(0,10) : '',
+    nextRecurAt:   r.nextRecurAt   || '',
   };
 }
 
@@ -1001,6 +1017,7 @@ async function addItem() {
     delegationExpiry: '',
     recurring:        '',
     lastCompleted:    '',
+    nextRecurAt:      '',
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
@@ -1024,18 +1041,23 @@ async function toggle(id, e) {
   // Auto-reset recurring tasks
   if (item.cleared && item.recurring) {
     item.lastCompleted = new Date().toISOString().slice(0,10);
-    // Schedule the reset based on frequency
-    const delay = item.recurring === 'daily'   ? 1
-                : item.recurring === 'weekly'  ? 7
-                : item.recurring === 'monthly' ? 30
-                : 0;
-    if (delay > 0) {
-      const resetDate = new Date();
-      resetDate.setDate(resetDate.getDate() + delay);
-      item.snoozedUntil = resetDate.toISOString().slice(0,10);
+    // Use nextRecurAt if set, otherwise calculate default
+    if (item.nextRecurAt) {
+      item.snoozedUntil = item.nextRecurAt.slice(0,10);
+      item.nextRecurAt  = ''; // clear after use
+    } else {
+      const delay = item.recurring === 'daily'   ? 1
+                  : item.recurring === 'weekly'  ? 7
+                  : item.recurring === 'monthly' ? 30
+                  : 0;
+      if (delay > 0) {
+        const resetDate = new Date();
+        resetDate.setDate(resetDate.getDate() + delay);
+        resetDate.setHours(8, 0, 0, 0);
+        item.snoozedUntil = resetDate.toISOString().slice(0,10);
+      }
     }
   } else if (!item.cleared && item.recurring && item.snoozedUntil) {
-    // Un-clearing a recurring task — restore it
     item.snoozedUntil = '';
   }
   render();
@@ -1241,6 +1263,8 @@ async function saveEdit(id) {
   item.deadline    = document.getElementById('edit-deadline-' + id).value || '';
   item.snoozedUntil    = document.getElementById('edit-snooze-' + id).value || '';
   item.recurring       = document.getElementById('edit-recurring-' + id).value || '';
+  const nextRecEl      = document.getElementById('edit-nextrec-' + id);
+  item.nextRecurAt     = nextRecEl ? nextRecEl.value : '';
   const newDelegatedTo    = (document.getElementById('edit-delegatedto-' + id).value || '').trim();
   const newDelegationDate = document.getElementById('edit-delegationexpiry-' + id).value || '';
   if (newDelegatedTo && !newDelegationDate) {
@@ -1314,6 +1338,8 @@ function visible() {
   return items.filter(i => {
     if (i.remission) return false;
     if (i.delegated && !searchQuery) return false;
+    // Hide personal low priority in work mode
+    if (!offClock && i.tag === 'personal' && (i.pri === '3') && !searchQuery) return false;
     // Snoozed items hidden unless searching
     if (i.snoozedUntil && !searchQuery) {
       const snoozeDate = new Date(i.snoozedUntil);
@@ -1471,6 +1497,7 @@ function render() {
   renderRemission();
   renderArchiveBucket();
   renderReflection();
+  renderSnoozedPanel();
 }
 
 function deadlineHTML(item) {
@@ -1561,12 +1588,15 @@ function itemHTML(i) {
       </div>
     </div>
     <div class="edit-label" style="margin-top:8px">Recurring <span style="font-weight:400;text-transform:none;font-size:11px">(auto-resets when cleared)</span></div>
-    <select class="edit-field" id="edit-recurring-${i.id}" style="margin-bottom:8px">
+    <select class="edit-field" id="edit-recurring-${i.id}" style="margin-bottom:8px" onchange="updateNextRecurAt(${i.id})">
       <option value=""   ${!i.recurring              ?'selected':''}>Not recurring</option>
       <option value="daily"   ${ i.recurring==='daily'   ?'selected':''}>Daily</option>
       <option value="weekly"  ${ i.recurring==='weekly'  ?'selected':''}>Weekly</option>
       <option value="monthly" ${ i.recurring==='monthly' ?'selected':''}>Monthly</option>
     </select>
+    ${i.recurring ? `<div class="edit-label">Next occurrence <span style="font-weight:400;font-size:11px;text-transform:none">(defaults to 8am)</span></div>
+    <input class="edit-field" type="datetime-local" id="edit-nextrec-${i.id}"
+      value="${i.nextRecurAt || ''}" style="margin-bottom:8px" />` : ''}
     <div class="edit-label" style="margin-top:8px">Delegated to <span style="font-weight:400;text-transform:none;font-size:11px">(optional — moves task to Delegated panel)</span></div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
       <input class="edit-field" type="text" id="edit-delegatedto-${i.id}" value="${i.delegatedTo || ''}" placeholder="Person's name…" style="margin-bottom:0;flex:1" />
@@ -2686,6 +2716,21 @@ function deleteSubtask(itemId, subId) {
   apiPost({ action: 'update', item });
 }
 
+function updateNextRecurAt(id) {
+  // When recurring type changes in edit panel, pre-fill nextRecurAt with default
+  const sel = document.getElementById('edit-recurring-' + id);
+  const inp = document.getElementById('edit-nextrec-' + id);
+  if (!sel || !inp || inp.value) return; // don't overwrite if already set
+  const freq = sel.value;
+  if (!freq) return;
+  const d = new Date();
+  d.setHours(8, 0, 0, 0);
+  const delay = freq === 'daily' ? 1 : freq === 'weekly' ? 7 : 30;
+  d.setDate(d.getDate() + delay);
+  const local = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  inp.value = local;
+}
+
 function editSubtaskName(itemId, subId) {
   const item = items.find(i => i.id === itemId);
   if (!item) return;
@@ -2775,6 +2820,48 @@ function updateLoadCounter() {
   el.textContent = '⏱ ' + label;
   el.style.display = 'flex';
   el.className = 'load-counter' + (totalMins > 360 ? ' heavy' : totalMins > 240 ? ' warn' : '');
+}
+
+// ── Snoozed panel ─────────────────────────────────────────
+let snoozedCollapsed = true;
+
+function toggleSnoozedPanel() {
+  snoozedCollapsed = !snoozedCollapsed;
+  const p = document.getElementById('snoozed-panel-el');
+  if (p) p.classList.toggle('collapsed', snoozedCollapsed);
+}
+
+function renderSnoozedPanel() {
+  const el = document.getElementById('snoozed-bucket');
+  if (!el) return;
+  const now = new Date();
+  const snoozed = items.filter(i => i.snoozedUntil && new Date(i.snoozedUntil) > now && !i.archived);
+  if (!snoozed.length) { el.innerHTML = ''; return; }
+
+  const rows = snoozed.map(i => {
+    const snoozeDate = new Date(i.snoozedUntil);
+    const label = snoozeDate.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--radius)">'
+      + '<span style="flex:1;font-size:13px">' + i.name + '</span>'
+      + '<span style="font-size:11px;color:#185FA5">💤 ' + label + '</span>'
+      + '<button class="delegated-recall" onclick="clearItemSnooze(' + i.id + ')" style="border-color:#185FA5;color:#185FA5">↑ Wake</button>'
+      + '</div>';
+  }).join('');
+
+  el.innerHTML = '<div class="snoozed-panel ' + (snoozedCollapsed ? 'collapsed' : '') + '" id="snoozed-panel-el">'
+    + '<div class="snoozed-hdr" onclick="toggleSnoozedPanel()">'
+    + '<div class="snoozed-hdr-title"><i class="ti ti-moon" style="font-size:13px"></i> Snoozed <span class="snoozed-count">' + snoozed.length + '</span></div>'
+    + '<i class="ti ti-chevron-down snoozed-chevron"></i></div>'
+    + '<div class="snoozed-body">' + rows + '</div></div>';
+}
+
+async function clearItemSnooze(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.snoozedUntil = '';
+  item.starred = true;
+  render();
+  await apiPost({ action: 'update', item });
 }
 
 // ── Schedule to calendar ──────────────────────────────────
