@@ -603,6 +603,13 @@
   <!-- Sync status -->
   <div class="sync-status" id="sync-status"></div>
 
+  <!-- Search -->
+  <div style="margin-bottom:10px;position:relative">
+    <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none" aria-hidden="true"></i>
+    <input type="text" id="search-input" placeholder="Search tasks and contacts…" oninput="onSearch()"
+      style="width:100%;padding:8px 10px 8px 32px;border-radius:var(--radius-lg);border:2px solid var(--border2);background:var(--bg);color:var(--text);font-size:14px;box-sizing:border-box" />
+  </div>
+
   <!-- Add form -->
   <div class="add-form">
     <div class="add-row">
@@ -631,13 +638,6 @@
     </div>
   </div>
 
-
-  <!-- Search -->
-  <div style="margin-bottom:8px;position:relative">
-    <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none" aria-hidden="true"></i>
-    <input type="text" id="search-input" placeholder="Search tasks and contacts…" oninput="onSearch()"
-      style="width:100%;padding:8px 10px 8px 32px;border-radius:var(--radius-lg);border:0.5px solid var(--border);background:var(--bg);color:var(--text);font-size:14px" />
-  </div>
 
   <!-- Outreach panel -->
   <div class="outreach-panel" id="outreach-panel">
@@ -2551,6 +2551,7 @@ function normalizeErrand(r) {
     archivedAt: r.archivedAt || '',
     added:    (r.added || '').slice(0,10),
     type:     r.type || 'errand',
+    note:     r.note || '',
   };
 }
 
@@ -2590,7 +2591,7 @@ async function addErrands() {
   const names = raw.split(/[,\u000a]+/).map(s => s.trim()).filter(Boolean);
   for (const name of names) {
     const etype = document.getElementById('e-type') ? document.getElementById('e-type').value : 'errand';
-    const item = { id: Math.floor(Date.now() + Math.random()*1000), name, pri:'2', starred:false, done:false, archived:false, added: new Date().toISOString().slice(0,10), type: etype };
+    const item = { id: Math.floor(Date.now() + Math.random()*1000), name, pri:'2', starred:false, done:false, archived:false, added: new Date().toISOString().slice(0,10), type: etype, note: '' };
     errandsItems.unshift(item);
     await errandsPost({ action: 'addErrand', item });
   }
@@ -2706,7 +2707,10 @@ function renderErrands() {
       <span style="font-size:15px;flex-shrink:0;cursor:pointer;color:var(--text2)" onclick="cycleErrandType(${o.id}, event)" title="Tap to change type">
         <i class="${o.type === 'shopping' ? 'ti ti-shopping-cart' : 'ti ti-car'}"></i>
       </span>
-      <span class="errands-name ${o.done ? 'done' : ''}" id="ename-${o.id}" onclick="editErrandName(${o.id}, event)">${o.name}</span>
+      <div style="flex:1;min-width:0">
+        <span class="errands-name ${o.done ? 'done' : ''}" id="ename-${o.id}" onclick="editErrandName(${o.id}, event)">${o.name}</span>
+        ${o.note ? `<span style="display:block;font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.note}</span>` : ''}
+      </div>
       ${priBadge}
       <button class="errands-star ${o.starred ? 'on' : ''}" onclick="toggleErrandStar(${o.id}, event)" title="Star for today">★</button>
       <div class="errands-pri-btns">
