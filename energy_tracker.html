@@ -84,6 +84,17 @@
   .setup-banner input { width: 100%; margin-top: 8px; padding: 7px 10px; border-radius: var(--radius); border: 0.5px solid #85B7EB; font-size: 13px; background: white; color: #042C53; }
   .setup-banner button { margin-top: 8px; padding: 6px 14px; font-size: 13px; border-radius: var(--radius); border: 0.5px solid #378ADD; background: #E6F1FB; color: #185FA5; cursor: pointer; }
 
+  /* Bug-report banner — fires only on a blocking error; reuses the calm setup-banner palette */
+  .bug-banner { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 100000; width: min(520px, calc(100vw - 32px)); box-sizing: border-box; background: #E6F1FB; border: 0.5px solid #B5D4F4; border-radius: var(--radius-lg); padding: 0.9rem 1.1rem; font-size: 13px; color: #0C447C; line-height: 1.55; box-shadow: 0 4px 20px rgba(0,0,0,.18); }
+  .bug-banner strong { font-weight: 600; }
+  .bug-banner input { width: 100%; margin-top: 8px; padding: 7px 10px; border-radius: var(--radius); border: 0.5px solid #85B7EB; font-size: 13px; background: white; color: #042C53; box-sizing: border-box; }
+  .bug-banner textarea { width: 100%; margin-top: 8px; height: 70px; padding: 7px 10px; border-radius: var(--radius); border: 0.5px solid #85B7EB; font: 11px/1.4 ui-monospace,Menlo,monospace; background: white; color: #042C53; box-sizing: border-box; resize: vertical; }
+  .bug-banner button { margin-top: 8px; padding: 6px 14px; font-size: 13px; border-radius: var(--radius); border: 0.5px solid #378ADD; background: #E6F1FB; color: #185FA5; cursor: pointer; }
+  .bug-banner .bug-dismiss { position: absolute; top: 6px; right: 10px; margin: 0; padding: 0 6px; border: none; background: none; font-size: 18px; line-height: 1; color: #6A93C0; }
+  /* Small persistent "I saw something weird" affordance — deliberately unobtrusive */
+  .bug-report-btn { margin-left: 8px; padding: 0 5px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: none; color: var(--text3); font-size: 11px; cursor: pointer; opacity: .6; }
+  .bug-report-btn:hover { opacity: 1; }
+
   /* Stats */
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.25rem; }
   .stat { background: var(--bg); border-radius: var(--radius-lg); padding: 14px 10px 12px; text-align: center; border: 1.5px solid transparent; cursor: pointer; transition: border-color .15s, background .15s; user-select: none; }
@@ -577,6 +588,15 @@
     <button onclick="saveScriptUrl()">Save &amp; connect</button>
   </div>
 
+  <!-- Bug-report banner — hidden until a blocking error or the report button fires showBugBanner() -->
+  <div class="bug-banner" id="bug-banner" style="display:none">
+    <button class="bug-dismiss" onclick="dismissBugBanner()" title="Dismiss" aria-label="Dismiss">&times;</button>
+    <strong>Something went wrong</strong> — your data is saved locally. Copy a report so an agent can fix it.
+    <input type="text" id="bug-symptom" placeholder="What were you doing? (optional)" />
+    <button id="bug-copy-btn" onclick="copyBugReport()">Copy report for the agent</button>
+    <textarea id="bug-report-text" readonly aria-label="Bug report text" style="display:none"></textarea>
+  </div>
+
   <!-- Pomodoro -->
   <div class="pomo-bar" id="pomo-bar-container">
     <div style="display:flex;align-items:center;gap:8px;width:100%">
@@ -612,7 +632,7 @@
   <div class="stats" id="stats"></div>
 
   <!-- Sync status -->
-  <div class="sync-status" id="sync-status"></div>
+  <div class="sync-status" id="sync-status"><span id="sync-status-text"></span><button class="bug-report-btn" onclick="showBugBanner()" title="Report a problem to the agent">⚠ report</button></div>
 
   <!-- Search -->
   <div style="margin-bottom:10px;position:relative">
@@ -775,6 +795,11 @@ const html = (strs, ...vals) => strs.reduce((out, s, i) =>
   out + s + (i < vals.length
     ? (vals[i] != null && vals[i][RAW] !== undefined ? vals[i][RAW] : esc(vals[i]))
     : ''), '');
+
+// ── Build stamp ───────────────────────────────────────────
+// Plain editable date string — no build step in a single-file app. AGENTS.md instructs
+// bumping it on every change. Surfaced in bug reports and the ?debug panel.
+const BUILD = '2026-06-22';   // bump on every change; stamped into every bug report
 
 // ── State ─────────────────────────────────────────────────
 let offClock = localStorage.getItem('offClock') === 'true';
@@ -947,7 +972,8 @@ function normalize(r) {
 
 function setSyncStatus(msg, cls) {
   const el = document.getElementById('sync-status');
-  el.textContent = msg;
+  const txt = document.getElementById('sync-status-text');
+  (txt || el).textContent = msg;            // keep the persistent ⚠ report button intact
   el.className = 'sync-status ' + (cls || '');
 }
 
@@ -1001,11 +1027,92 @@ async function apiPost(payload) {
     try {
       await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
       localStorage.setItem('itemsCache', JSON.stringify(items));
+      return { ok: true };
     } catch(e) {
       setSyncStatus('Sync failed — saved locally', 'sync-err');
       localStorage.setItem('itemsCache', JSON.stringify(items));
+      return { ok: false };
     }
   });
+}
+
+// ── Ring-buffer event log ─────────────────────────────────
+// In-memory mirror loaded once at startup, persisted to localStorage on each append so
+// it survives reloads. Bounded to the last ~200 entries. Feeds the bug-report prompt and
+// the ?debug panel — the post-mortem layer for the non-technical author + agent maintainer.
+const LOG_MAX = 200, LOG_KEY = 'eventLog';
+let eventLog = (() => { try { const v = JSON.parse(localStorage.getItem(LOG_KEY)); return Array.isArray(v) ? v : []; } catch { return []; } })();
+function persistLog() { try { localStorage.setItem(LOG_KEY, JSON.stringify(eventLog)); } catch {} }
+function logEvent(e) {                     // e: {entity, action, id, patch?} or {error, stack}
+  const entry = { ts: new Date().toISOString(), ...e };
+  if (e.patch) { entry.patch = Object.keys(e.patch).join(','); }   // summary only — field names, not values
+  eventLog.push(entry);
+  if (eventLog.length > LOG_MAX) eventLog = eventLog.slice(-LOG_MAX);
+  persistLog();
+  return entry;                            // caller may stamp .sync later
+}
+// Wrap a writer promise so each logged mutation records its eventual sync outcome.
+function logSync(promise, meta) {
+  const entry = logEvent({ ...meta, sync: 'pending' });
+  return promise.then(res => { entry.sync = (res && res.ok === false) ? 'fail' : 'ok'; persistLog(); return res; });
+}
+
+// ── Bug-report assembly + banner ──────────────────────────
+// The unifying principle: never face an error code at the user — the error IS a
+// pre-written prompt the user pastes straight into an agent. assembleReport() builds
+// that prompt from BUILD + the most recent error + the ring buffer + a state snapshot.
+function assembleReport(symptom) {
+  const errs = eventLog.filter(e => e.error);
+  const lastErr = errs[errs.length - 1];
+  const errLine = lastErr
+    ? lastErr.error + (lastErr.stack ? '\n' + lastErr.stack : '')
+    : 'none';
+  const recent = eventLog.slice(-20).map(e => {
+    if (e.error) return '  ' + e.ts + ' · ERROR · ' + e.error;
+    return '  ' + e.ts + ' · ' + (e.entity || '?') + ' · ' + (e.action || '?')
+      + ' · id=' + (e.id != null ? e.id : '?')
+      + ' · sync=' + (e.sync || '-')
+      + (e.patch ? ' · patch=' + e.patch : '');
+  }).join('\n') || '  (none yet)';
+  const pills = activePills && activePills.size ? [...activePills].join(',') : '(none)';
+  return [
+    'This is an auto-generated bug report from energy_tracker.html (build: ' + BUILD + ').',
+    'Symptom (user): ' + (symptom && symptom.trim() ? symptom.trim() : '(none given)'),
+    'Error: ' + errLine,
+    'Recent actions (oldest→newest):',
+    recent,
+    'State: items=' + items.length + ' outreach=' + outreachItems.length + ' errands=' + errandsItems.length
+      + ' · scriptUrl=' + (scriptUrl ? 'set' : 'unset')
+      + ' · offClock=' + offClock
+      + ' · pills=' + pills,
+    'Please reproduce via ?selftest, trace the actions above, and propose a minimal fix.',
+  ].join('\n');
+}
+
+function showBugBanner() {                  // idempotent — re-entrant errors don't stack banners
+  const banner = document.getElementById('bug-banner');
+  if (!banner) return;
+  banner.style.display = 'block';
+}
+function dismissBugBanner() {
+  const banner = document.getElementById('bug-banner');
+  if (banner) banner.style.display = 'none';
+}
+function copyBugReport() {
+  const symptom = (document.getElementById('bug-symptom') || {}).value || '';
+  const report = assembleReport(symptom);
+  const ta = document.getElementById('bug-report-text');
+  const btn = document.getElementById('bug-copy-btn');
+  // Always drop into the readonly textarea + select() — manual copy works on file://
+  // where the async clipboard API is unreliable.
+  if (ta) { ta.value = report; ta.style.display = 'block'; ta.select(); }
+  const flip = () => { if (btn) { btn.textContent = 'Copied!'; } };
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(report).then(flip, () => {});
+    }
+  } catch {}
+  return report;
 }
 
 // ── Mutation choke point ──────────────────────────────────
@@ -1044,19 +1151,19 @@ function commit(entity, id, patch = {}, opts = {}) {
   if (!obj) return Promise.resolve();
   Object.assign(obj, patch);
   if (opts.render !== false) E.render();
-  return E.post({ action: E.A.update, item: obj });
+  return logSync(E.post({ action: E.A.update, item: obj }), { entity, action: E.A.update, id: obj.id, patch });
 }
 function commitAdd(entity, item, opts = {}) {
   const E = SYNC[entity];
   E.add(item);
   if (opts.render !== false) E.render();
-  return E.post({ action: E.A.add, item });
+  return logSync(E.post({ action: E.A.add, item }), { entity, action: E.A.add, id: item.id });
 }
 function commitDelete(entity, id, opts = {}) {
   const E = SYNC[entity];
   E.drop(id);
   if (opts.render !== false) E.render();
-  return E.post({ action: E.A.del, id });
+  return logSync(E.post({ action: E.A.del, id }), { entity, action: E.A.del, id });
 }
 
 // ── Actions ───────────────────────────────────────────────
@@ -2022,8 +2129,10 @@ async function outreachPost(payload) {
     try {
       await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
       localStorage.setItem('outreachCache', JSON.stringify(outreachItems));
+      return { ok: true };
     } catch(e) {
       localStorage.setItem('outreachCache', JSON.stringify(outreachItems));
+      return { ok: false };
     }
   });
 }
@@ -2679,8 +2788,10 @@ async function errandsPost(payload) {
     try {
       await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
       localStorage.setItem('errandsCache', JSON.stringify(errandsItems));
+      return { ok: true };
     } catch(e) {
       localStorage.setItem('errandsCache', JSON.stringify(errandsItems));
+      return { ok: false };
     }
   });
 }
@@ -3169,6 +3280,8 @@ async function runSelfTest() {
   };
   const realRender = render, realRenderOutreach = renderOutreach, realRenderErrands = renderErrands;
   const realFetch2 = window.fetch;
+  // commit* now taps the event log (logSync → logEvent → persistLog), so isolate it too.
+  const logSnap2 = eventLog.slice(), logKeySnap2 = localStorage.getItem(LOG_KEY);
   try {
     let renderCalls = 0;
     render = () => { renderCalls++; };           // stub: count list re-renders
@@ -3214,6 +3327,76 @@ async function runSelfTest() {
       if (cacheSnap2[k] === null) localStorage.removeItem(k);
       else localStorage.setItem(k, cacheSnap2[k]);
     }
+    eventLog = logSnap2;
+    if (logKeySnap2 === null) localStorage.removeItem(LOG_KEY);
+    else localStorage.setItem(LOG_KEY, logKeySnap2);
+  }
+
+  // ── Async probe: prove the event log + commit tap + report assembly ──
+  // Same isolation discipline: snapshot eventLog + its localStorage key + the items array,
+  // stub the render fns and window.fetch, run on a cleared log, restore everything in finally.
+  const logSnap = eventLog.slice();
+  const logKeySnap = localStorage.getItem(LOG_KEY);
+  const arrSnap3 = { items: items.slice() };
+  const cacheSnap3 = {                          // the commit tap below persists itemsCache
+    itemsCache: localStorage.getItem('itemsCache'),
+    outreachCache: localStorage.getItem('outreachCache'),
+    errandsCache: localStorage.getItem('errandsCache'),
+  };
+  const realRender3 = render, realRenderOutreach3 = renderOutreach, realRenderErrands3 = renderErrands;
+  const realFetch3 = window.fetch;
+  try {
+    render = () => {}; renderOutreach = () => {}; renderErrands = () => {};
+    window.fetch = () => Promise.resolve({ ok: true });
+    eventLog = [];                                   // deterministic counts for this probe
+
+    // logEvent summarizes a patch to field NAMES only — never values.
+    const pe = logEvent({ entity: 'item', action: 'update', id: 1, patch: { starred: true } });
+    assert('logEvent summarizes patch to field names only', pe.patch === 'starred');
+    assert('logEvent never records patch values', JSON.stringify(pe).indexOf('true') === -1);
+
+    // ring buffer bounds: pushing LOG_MAX+5 leaves exactly LOG_MAX, oldest dropped.
+    eventLog = [];
+    for (let i = 0; i < LOG_MAX + 5; i++) logEvent({ entity: 'item', action: 'update', id: i });
+    assert('ring buffer bounded to LOG_MAX', eventLog.length === LOG_MAX);
+    assert('ring buffer drops oldest, retains newest',
+      eventLog[0].id === 5 && eventLog[eventLog.length - 1].id === LOG_MAX + 4);
+
+    // commit tap: a stubbed-fetch commit appends one entry whose sync settles to 'ok'.
+    eventLog = [];
+    const sentinel3 = { id: 990000002, name: 'log-sentinel', starred: false, pri: '2', subtasks: [] };
+    items = [sentinel3];
+    await commit('item', sentinel3.id, { starred: true });
+    const tap = eventLog.filter(e => e.id === sentinel3.id && e.action === 'update');
+    assert('commit tap appends one log entry', tap.length === 1);
+    assert('commit tap settles sync to ok', tap[0] && tap[0].sync === 'ok');
+
+    // error logging: carries the message + stack.
+    eventLog = [];
+    const ee = logEvent({ error: 'boom', stack: 'x' });
+    assert('logEvent records error message + stack', ee.error === 'boom' && ee.stack === 'x');
+
+    // assembleReport: contains BUILD, the symptom, the State: line, and ≥1 recent action.
+    eventLog = [];
+    logEvent({ entity: 'item', action: 'add', id: 42 });
+    const report = assembleReport('typing test');
+    assert('assembleReport contains BUILD', report.indexOf(BUILD) !== -1);
+    assert('assembleReport contains the symptom text', report.indexOf('typing test') !== -1);
+    assert('assembleReport contains the State: line', report.indexOf('State: items=') !== -1);
+    assert('assembleReport lists a recent action', report.indexOf('id=42') !== -1);
+  } catch (e) {
+    assert('event-log probe ran without uncaught error: ' + (e && e.message), false);
+  } finally {
+    render = realRender3; renderOutreach = realRenderOutreach3; renderErrands = realRenderErrands3;
+    window.fetch = realFetch3;
+    items = arrSnap3.items;
+    eventLog = logSnap;
+    if (logKeySnap === null) localStorage.removeItem(LOG_KEY);
+    else localStorage.setItem(LOG_KEY, logKeySnap);
+    for (const k of ['itemsCache', 'outreachCache', 'errandsCache']) {
+      if (cacheSnap3[k] === null) localStorage.removeItem(k);
+      else localStorage.setItem(k, cacheSnap3[k]);
+    }
   }
 
   const passed = results.filter(r => r.pass).length;
@@ -3235,6 +3418,36 @@ async function runSelfTest() {
   document.body.appendChild(panel);
 }
 
+// ── Debug panel (?debug) ──────────────────────────────────
+// Read-only diagnostic overlay: BUILD, state counts, the ring buffer (newest-first), and
+// a Copy-report button. Built with the safe-HTML primitives so log values can't break out.
+function runDebugPanel() {
+  const stateLine = 'items=' + items.length + ' · outreach=' + outreachItems.length
+    + ' · errands=' + errandsItems.length
+    + ' · scriptUrl=' + (scriptUrl ? 'set' : 'unset')
+    + ' · offClock=' + offClock;
+  const rows = eventLog.slice().reverse().map(e => {
+    const line = e.error
+      ? 'ERROR · ' + e.error
+      : (e.entity || '?') + ' · ' + (e.action || '?') + ' · id=' + (e.id != null ? e.id : '?')
+        + ' · sync=' + (e.sync || '-') + (e.patch ? ' · patch=' + e.patch : '');
+    return html`<div style="${raw('padding:2px 0;border-bottom:0.5px solid rgba(255,255,255,.08)')}"><span style="${raw('color:#8aa')}">${e.ts}</span> ${line}</div>`;
+  }).join('') || '<div style="opacity:.6">(event log empty)</div>';
+
+  const panel = document.createElement('div');
+  panel.id = 'debug-panel';
+  panel.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);z-index:99999;'
+    + 'padding:12px 16px;font:12px/1.5 ui-monospace,Menlo,monospace;overflow:auto;'
+    + 'background:#16181c;color:#e8e8e8;box-shadow:-2px 0 10px rgba(0,0,0,.5)';
+  panel.innerHTML =
+    '<div style="font-weight:700;font-size:14px;margin-bottom:6px">⚙ DEBUG — build ' + esc(BUILD) + '</div>'
+    + '<button onclick="copyBugReport()" style="margin-bottom:8px;padding:5px 12px;font-size:12px;border-radius:6px;border:0.5px solid #4a90d9;background:#1e3a5f;color:#cfe3ff;cursor:pointer">Copy report</button>'
+    + '<div style="margin-bottom:8px;color:#9bd;word-break:break-all">State: ' + esc(stateLine) + '</div>'
+    + '<div style="font-weight:600;margin-bottom:4px">Event log (newest first, ' + eventLog.length + '):</div>'
+    + rows;
+  document.body.appendChild(panel);
+}
+
 // ── Init ──────────────────────────────────────────────────
 document.getElementById('f-name').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
 document.getElementById('o-name').addEventListener('keydown', e => { if (e.key === 'Enter') addOutreach(); });
@@ -3243,10 +3456,27 @@ updateFocusDisplay();
 // re-render focus bar after layout settles so widths are correct
 setTimeout(updateFocusDisplay, 100);
 
+// ── Global error trap ─────────────────────────────────────
+// The "garbled page" moment becomes a recorded, reportable event. Tiny + self-guarded so
+// a fault in the handler can't loop. Only a blocking error raises the banner (per the
+// user's decision); ordinary Sheet sync failures stay the quiet inline status line.
+window.addEventListener('error', e => { try { logEvent({ error: String(e.message || e.error), stack: e.error && e.error.stack }); showBugBanner(); } catch {} });
+window.addEventListener('unhandledrejection', e => { try { logEvent({ error: 'unhandledrejection: ' + String(e.reason), stack: e.reason && e.reason.stack }); showBugBanner(); } catch {} });
+
 const _qs = new URLSearchParams(location.search);
 if (_qs.has('selftest')) {
   // Deterministic, offline: run assertions instead of the network bootstrap.
   runSelfTest();
+} else if (_qs.has('debug')) {
+  // Read-only diagnostic overlay — runs the NORMAL bootstrap so live state is real,
+  // then paints the ring buffer + state snapshot. Pairs with ?selftest.
+  applyClockMode();
+  loadItems();
+  loadOutreach();
+  loadErrands();
+  loadFocusFromSheet();
+  renderRemission();
+  setTimeout(runDebugPanel, 300);   // let the loads settle so counts/log are populated
 } else {
   applyClockMode();
   loadItems();
