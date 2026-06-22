@@ -983,14 +983,29 @@ async function loadItems() {
   }
 }
 
+// ── Write serialization queue ─────────────────────────────
+// All Sheet writes funnel through one FIFO chain so rapid edits POST in order.
+// The backend is a single Apps Script web app serializing on one spreadsheet, so
+// overlapping fetches can land out of order and clobber a newer write. Each task
+// runs only after the previous SETTLES (success or failure), so one failed/offline
+// write can never stall the queue.
+let _syncChain = Promise.resolve();
+function enqueueSync(task) {
+  const run = _syncChain.then(task, task);        // run after prior settles, either way
+  _syncChain = run.then(() => {}, () => {});      // chain stays resolved; failures don't jam it
+  return run;                                      // caller awaits its own write, as before
+}
+
 async function apiPost(payload) {
-  try {
-    await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
-    localStorage.setItem('itemsCache', JSON.stringify(items));
-  } catch(e) {
-    setSyncStatus('Sync failed — saved locally', 'sync-err');
-    localStorage.setItem('itemsCache', JSON.stringify(items));
-  }
+  return enqueueSync(async () => {
+    try {
+      await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
+      localStorage.setItem('itemsCache', JSON.stringify(items));
+    } catch(e) {
+      setSyncStatus('Sync failed — saved locally', 'sync-err');
+      localStorage.setItem('itemsCache', JSON.stringify(items));
+    }
+  });
 }
 
 // ── Actions ───────────────────────────────────────────────
@@ -1960,12 +1975,14 @@ async function loadOutreach() {
 }
 
 async function outreachPost(payload) {
-  try {
-    await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
-    localStorage.setItem('outreachCache', JSON.stringify(outreachItems));
-  } catch(e) {
-    localStorage.setItem('outreachCache', JSON.stringify(outreachItems));
-  }
+  return enqueueSync(async () => {
+    try {
+      await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
+      localStorage.setItem('outreachCache', JSON.stringify(outreachItems));
+    } catch(e) {
+      localStorage.setItem('outreachCache', JSON.stringify(outreachItems));
+    }
+  });
 }
 
 function toggleOutreach() {
@@ -2652,12 +2669,14 @@ async function loadErrands() {
 }
 
 async function errandsPost(payload) {
-  try {
-    await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
-    localStorage.setItem('errandsCache', JSON.stringify(errandsItems));
-  } catch(e) {
-    localStorage.setItem('errandsCache', JSON.stringify(errandsItems));
-  }
+  return enqueueSync(async () => {
+    try {
+      await fetch(scriptUrl, { method: 'POST', body: JSON.stringify(payload) });
+      localStorage.setItem('errandsCache', JSON.stringify(errandsItems));
+    } catch(e) {
+      localStorage.setItem('errandsCache', JSON.stringify(errandsItems));
+    }
+  });
 }
 
 function toggleErrands() {
@@ -3115,6 +3134,42 @@ async function runSelfTest() {
     assert('outreachItemHTML escapes name', outOut.includes('&lt;b&gt;') && !outOut.includes('<b>x</b>'));
   } catch (e) {
     assert('harness ran without uncaught error: ' + (e && e.message), false);
+  }
+
+  // ── Async probe: prove the write queue serializes (max 1 in flight, in order) ──
+  // Non-destructive: snapshot the three cache keys up front and restore them after.
+  const cacheSnapshot = {
+    itemsCache: localStorage.getItem('itemsCache'),
+    outreachCache: localStorage.getItem('outreachCache'),
+    errandsCache: localStorage.getItem('errandsCache'),
+  };
+  const realFetch = window.fetch;
+  try {
+    let active = 0, maxActive = 0;
+    const order = [];
+    // Fake fetch: earlier calls resolve LATER, so a parallel impl would overlap.
+    window.fetch = (url, opts) => {
+      active++;
+      maxActive = Math.max(maxActive, active);
+      const n = JSON.parse(opts.body).n;
+      order.push(String(n));
+      return new Promise(res => setTimeout(() => { active--; res({ ok: true }); }, 10 * (4 - n)));
+    };
+    apiPost({ action: 'test', n: 1 });
+    apiPost({ action: 'test', n: 2 });
+    await apiPost({ action: 'test', n: 3 });
+    window.fetch = realFetch;
+    assert('writes serialize (max 1 in flight)', maxActive === 1);
+    assert('writes dispatch in order', order.join() === '1,2,3');
+  } catch (e) {
+    window.fetch = realFetch;
+    assert('queue probe ran without uncaught error: ' + (e && e.message), false);
+  } finally {
+    // Restore cache keys so ?selftest stays non-destructive.
+    for (const k of ['itemsCache', 'outreachCache', 'errandsCache']) {
+      if (cacheSnapshot[k] === null) localStorage.removeItem(k);
+      else localStorage.setItem(k, cacheSnapshot[k]);
+    }
   }
 
   const passed = results.filter(r => r.pass).length;
