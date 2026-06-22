@@ -766,6 +766,16 @@ const PRI = {
   '3': { label: '↓ Low priority',  badge: '↓',  cls: 'pri-low',  selCls: 'sel-low'  },
 };
 
+// ── Safe HTML primitives ──────────────────────────────────
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const RAW = Symbol('raw');
+const raw = s => ({ [RAW]: s });           // wrap already-trusted HTML
+const html = (strs, ...vals) => strs.reduce((out, s, i) =>
+  out + s + (i < vals.length
+    ? (vals[i] != null && vals[i][RAW] !== undefined ? vals[i][RAW] : esc(vals[i]))
+    : ''), '');
+
 // ── State ─────────────────────────────────────────────────
 let offClock = localStorage.getItem('offClock') === 'true';
 let items = [];
@@ -1167,7 +1177,7 @@ function renderArchiveBucket() {
   const rows = todayItems.map(i => {
     const c = CATS[i.cat] || CATS['3'];
     return '<div class="archive-item">'
-      + '<span class="archive-item-name">' + i.name + '</span>'
+      + '<span class="archive-item-name">' + esc(i.name) + '</span>'
       + '<span class="badge ' + c.cls + ' archive-item-cat">' + c.short + '</span>'
       + '</div>';
   }).join('');
@@ -1219,7 +1229,7 @@ function renderReflection() {
     return '<div class="reflection-item">'
       + '<span class="reflection-item-date">' + (i.archivedAt||'') + '</span>'
       + '<span class="badge ' + c.cls + '" style="font-size:10px;padding:1px 4px">' + c.short + '</span>'
-      + '<span style="flex:1">' + i.name + '</span>'
+      + '<span style="flex:1">' + esc(i.name) + '</span>'
       + '</div>';
   }).join('');
 
@@ -1584,7 +1594,7 @@ function subtasksHTML(item) {
       <div class="subtask-chk ${s.done ? 'done' : ''}" onclick="toggleSubtask(${item.id}, ${s.id})">
         ${s.done ? '<i class="ti ti-check"></i>' : ''}
       </div>
-      <span class="subtask-name ${s.done ? 'done' : ''}" id="stask-${item.id}-${s.id}" onclick="editSubtaskName(${item.id}, ${s.id})" title="Tap to edit" style="cursor:text">${s.name}</span>
+      <span class="subtask-name ${s.done ? 'done' : ''}" id="stask-${item.id}-${s.id}" onclick="editSubtaskName(${item.id}, ${s.id})" title="Tap to edit" style="cursor:text">${esc(s.name)}</span>
       <button class="subtask-move" onclick="moveSubtask(${item.id}, ${s.id},'up')" title="Move up">↑</button>
       <button class="subtask-move" onclick="moveSubtask(${item.id}, ${s.id},'down')" title="Move down">↓</button>
       <button class="subtask-del" onclick="deleteSubtask(${item.id}, ${s.id})"><i class="ti ti-x"></i></button>
@@ -1626,7 +1636,7 @@ function itemHTML(i) {
     <div class="edit-row">
       <div style="flex:2">
         <div class="edit-label">Name</div>
-        <input class="edit-field" id="edit-name-${i.id}" value="${i.name.replace(/"/g,'&quot;')}" style="margin-bottom:0" />
+        <input class="edit-field" id="edit-name-${i.id}" value="${esc(i.name)}" style="margin-bottom:0" />
       </div>
       <div>
         <div class="edit-label">Deadline <span style="font-weight:400;text-transform:none;font-size:11px">(optional)</span></div>
@@ -1663,7 +1673,7 @@ function itemHTML(i) {
       value="${i.nextRecurAt || ''}" style="margin-bottom:8px" />` : ''}
     <div class="edit-label" style="margin-top:8px">Delegated to <span style="font-weight:400;text-transform:none;font-size:11px">(optional — moves task to Delegated panel)</span></div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-      <input class="edit-field" type="text" id="edit-delegatedto-${i.id}" value="${i.delegatedTo || ''}" placeholder="Person's name…" style="margin-bottom:0;flex:1" />
+      <input class="edit-field" type="text" id="edit-delegatedto-${i.id}" value="${esc(i.delegatedTo || '')}" placeholder="Person's name…" style="margin-bottom:0;flex:1" />
       <input class="edit-field" type="date" id="edit-delegationexpiry-${i.id}" value="${i.delegationExpiry || ''}" style="margin-bottom:0;width:140px" title="Check-back date" />
     </div>
     <div class="edit-label" style="margin-top:8px">Priority</div>
@@ -1699,40 +1709,40 @@ function itemHTML(i) {
 
   const starredClass = i.starred ? 'starred-item' : '';
 
-  return `<div class="item ${c.acc} ${starredClass} ${i.cleared ? 'cleared' : ''} ${isExpanded ? 'expanded' : ''}" id="item-${i.id}">
+  return html`<div class="item ${raw(c.acc)} ${raw(starredClass)} ${raw(i.cleared ? 'cleared' : '')} ${raw(isExpanded ? 'expanded' : '')}" id="item-${i.id}">
     <div class="item-row" onclick="toggleExpand(${i.id}, event)">
-      <div class="chk ${i.cleared ? 'on' : ''}" onclick="toggle(${i.id}, event)" role="checkbox" aria-checked="${i.cleared}" tabindex="0">
-        ${i.cleared ? '<i class="ti ti-check"></i>' : ''}
+      <div class="chk ${raw(i.cleared ? 'on' : '')}" onclick="toggle(${i.id}, event)" role="checkbox" aria-checked="${i.cleared}" tabindex="0">
+        ${raw(i.cleared ? '<i class="ti ti-check"></i>' : '')}
       </div>
       <div class="item-body">
-        <div class="item-name ${i.cleared ? 'cleared' : ''}">${i.name}</div>
+        <div class="item-name ${raw(i.cleared ? 'cleared' : '')}">${i.name}</div>
         <div class="item-meta">
-          <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}" style="text-transform:none;letter-spacing:0">${i.tag === 'work' ? 'Work' : 'Personal'}</span>
-          ${i.recurring ? `<span class="recur-badge">🔁 ${i.recurring}</span>` : ''}
-          ${deadlineHTML(i)}
-          ${i.note ? `<span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">${linkifyNote(i.note)}</span>` : ''}
-          ${i.snoozedUntil && new Date(i.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5">💤 until ${new Date(i.snoozedUntil).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
-          ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
+          <span class="badge ${raw(i.tag === 'work' ? 'bwork' : 'bpersonal')}" style="text-transform:none;letter-spacing:0">${i.tag === 'work' ? 'Work' : 'Personal'}</span>
+          ${raw(i.recurring ? `<span class="recur-badge">🔁 ${esc(i.recurring)}</span>` : '')}
+          ${raw(deadlineHTML(i))}
+          ${raw(i.note ? `<span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">${linkifyNote(i.note)}</span>` : '')}
+          ${raw(i.snoozedUntil && new Date(i.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5">💤 until ${esc(new Date(i.snoozedUntil).toLocaleDateString('en-US',{month:'short',day:'numeric'}))}</span>` : '')}
+          ${raw(i.added ? `<span style="font-size:11px;color:var(--text3)">${esc(i.added)}</span>` : '')}
         </div>
-        ${(i.subtasks && i.subtasks.length) ? `<div class="subtask-pips"><span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-right:4px">subtasks</span>${i.subtasks.map(s => `<div class="pip ${s.done ? 'done' : 'open'}" title="${s.name}"></div>`).join('')}</div>` : ''}
+        ${raw((i.subtasks && i.subtasks.length) ? `<div class="subtask-pips"><span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-right:4px">subtasks</span>${i.subtasks.map(s => `<div class="pip ${s.done ? 'done' : 'open'}" title="${esc(s.name)}"></div>`).join('')}</div>` : '')}
       </div>
-      ${i.revenue ? '<span class="rev-badge" title="Revenue item">$</span>' : ''}
-      ${priBadge}
-      ${starBtn}
+      ${raw(i.revenue ? '<span class="rev-badge" title="Revenue item">$</span>' : '')}
+      ${raw(priBadge)}
+      ${raw(starBtn)}
       <select class="est-select" onclick="event.stopPropagation()" onchange="setEstimate(${i.id}, this.value)" title="Time estimate">
-        <option value="0"   ${i.estimate===0 ?'selected':''}>–</option>
-        <option value="5"   ${i.estimate===5  ?'selected':''}>5m</option>
-        <option value="15"  ${i.estimate===15 ?'selected':''}>15m</option>
-        <option value="30"  ${(!i.estimate||i.estimate===30)?'selected':''}>30m</option>
-        <option value="60"  ${i.estimate===60 ?'selected':''}>1h</option>
-        <option value="120" ${i.estimate===120?'selected':''}>2h</option>
-        <option value="240" ${i.estimate===240?'selected':''}>4h</option>
+        <option value="0"   ${raw(i.estimate===0 ?'selected':'')}>–</option>
+        <option value="5"   ${raw(i.estimate===5  ?'selected':'')}>5m</option>
+        <option value="15"  ${raw(i.estimate===15 ?'selected':'')}>15m</option>
+        <option value="30"  ${raw((!i.estimate||i.estimate===30)?'selected':'')}>30m</option>
+        <option value="60"  ${raw(i.estimate===60 ?'selected':'')}>1h</option>
+        <option value="120" ${raw(i.estimate===120?'selected':'')}>2h</option>
+        <option value="240" ${raw(i.estimate===240?'selected':'')}>4h</option>
       </select>
-      ${priBtns}
+      ${raw(priBtns)}
       <button class="cal-btn" onclick="scheduleTask(${i.id})" title="Schedule on Google Calendar"><i class="ti ti-calendar-plus"></i></button>
       <button class="del-btn" onclick="del(${i.id}, event)" aria-label="Remove"><i class="ti ti-trash"></i></button>
     </div>
-    ${editPanel}
+    ${raw(editPanel)}
   </div>`;
 }
 
@@ -2431,22 +2441,22 @@ function outreachItemHTML(o) {
   const dotCls = O_CAT_DOT[o.cat] || 'e3';
   const accCls = O_CAT_ACC[o.cat] || 'acc-neut';
   const typeIcon = o.type === 'email' ? 'ti-mail' : o.type === 'linkedin' ? 'ti-brand-linkedin' : 'ti-phone';
-  return `<div class="item ${accCls} ${o.starred ? 'starred-item' : ''}">
+  return html`<div class="item ${raw(accCls)} ${raw(o.starred ? 'starred-item' : '')}">
     <div class="item-row" style="cursor:default">
-      <div class="outreach-chk ${o.done ? 'done' : ''}" onclick="toggleOutreachDone(${o.id}, event)">
-        ${o.done ? '<i class="ti ti-check"></i>' : ''}
+      <div class="outreach-chk ${raw(o.done ? 'done' : '')}" onclick="toggleOutreachDone(${o.id}, event)">
+        ${raw(o.done ? '<i class="ti ti-check"></i>' : '')}
       </div>
       <div class="item-body">
         <div class="item-name" style="display:flex;align-items:center;gap:6px">
-          <i class="ti ${typeIcon}" style="font-size:13px;color:var(--text2)" aria-hidden="true"></i>
+          <i class="ti ${raw(typeIcon)}" style="font-size:13px;color:var(--text2)" aria-hidden="true"></i>
           ${o.name}
         </div>
         <div class="item-meta">
           <span class="badge bwork" style="text-transform:none;letter-spacing:0">Contact</span>
-          ${priBadge}
+          ${raw(priBadge)}
         </div>
       </div>
-      <button class="outreach-star ${o.starred ? 'on' : ''}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today" style="font-size:18px;padding:2px 4px;background:none;border:none;cursor:pointer;color:${o.starred ? '#f59e0b' : 'var(--border2)'}">★</button>
+      <button class="outreach-star ${raw(o.starred ? 'on' : '')}" onclick="toggleOutreachStar(${o.id}, event)" title="Star for today" style="font-size:18px;padding:2px 4px;background:none;border:none;cursor:pointer;color:${raw(o.starred ? '#f59e0b' : 'var(--border2)')}">★</button>
     </div>
   </div>`;
 }
@@ -2497,7 +2507,7 @@ function delegatedPanelHTML() {
       else if (daysLeft === 0) expiryText = ' · check back today';
       else                     expiryText = ' · ↩ ' + expiry.toLocaleDateString('en-US',{month:'short',day:'numeric'});
     }
-    const delegationLine = (i.delegatedTo ? '→ ' + i.delegatedTo : '') + expiryText;
+    const delegationLine = (i.delegatedTo ? '→ ' + esc(i.delegatedTo) : '') + expiryText;
     // Modify the item to show delegation info in its meta
     const augmented = Object.assign({}, i, { _delegationLine: delegationLine });
     const recall = '<button class="delegated-recall" onclick="event.stopPropagation();recallDelegated(' + i.id + ')">↑ Recall</button>';
@@ -2778,7 +2788,7 @@ function renderErrands() {
         <i class="${o.type === 'shopping' ? 'ti ti-shopping-cart' : 'ti ti-car'}"></i>
       </span>
       <div style="flex:1;min-width:0">
-        <span class="errands-name ${o.done ? 'done' : ''}" id="ename-${o.id}" onclick="editErrandName(${o.id}, event)">${o.name}</span>
+        <span class="errands-name ${o.done ? 'done' : ''}" id="ename-${o.id}" onclick="editErrandName(${o.id}, event)">${esc(o.name)}</span>
         ${o.note ? `<span style="display:block;font-size:11px;color:var(--text3)">${linkifyNote(o.note)}</span>` : ''}
       </div>
       ${priBadge}
@@ -3009,8 +3019,12 @@ async function clearContactSnooze(id) {
 // ── Linkify notes ─────────────────────────────────────────
 function linkifyNote(text) {
   if (!text) return '';
+  // Escape the full text first, then linkify the escaped string. After escaping,
+  // <,>," become entities (won't match the URL regex → inert text) and & inside a
+  // real URL becomes &amp; (valid in an href). Net: non-URL text is safe, URLs still link.
+  const escaped = esc(text);
   const urlRegex = /https?:\/\/[^\s<>"{}|\^`\[\]]+/g;
-  return text.replace(urlRegex, function(url) {
+  return escaped.replace(urlRegex, function(url) {
     const display = url.length > 60 ? url.slice(0,57) + '...' : url;
     return '<a href="' + url + '" target="_blank" rel="noopener" style="color:#185FA5;word-break:break-all" onclick="event.stopPropagation()">' + display + '</a>';
   });
@@ -3061,6 +3075,67 @@ async function loadFocusFromSheet() {
   } catch(e) { /* use local */ }
 }
 
+// ── Self-test harness (?selftest) ─────────────────────────
+// Opt-in, render-path-only regression gate. Runs assertions against the safe-HTML
+// primitives and the hot render helpers, then paints a fixed pass/fail panel.
+// Skips the normal network bootstrap so the test is deterministic and offline.
+async function runSelfTest() {
+  const results = [];
+  const assert = (name, cond) => results.push({ name, pass: !!cond });
+
+  try {
+    const e1 = esc('<img src=x onerror=alert(1)>');
+    assert('esc strips < and >', !e1.includes('<') && !e1.includes('>'));
+
+    const h1 = html`<b>${'<scr' + 'ipt>'}</b>`;
+    assert('html`` escapes value but keeps literal <b> tags',
+      h1.includes('<b>') && h1.includes('</b>') && h1.includes('&lt;') && !h1.includes('<scr'));
+
+    const h2 = html`${raw('<i>ok</i>')}`;
+    assert('html`` passes raw() fragment through unescaped', h2 === '<i>ok</i>');
+
+    const ln = linkifyNote('a <b> http://x.com/?a=1&b=2 z');
+    assert('linkifyNote escapes angle brackets', ln.includes('&lt;b&gt;'));
+    assert('linkifyNote emits an anchor tag', ln.includes('<a '));
+    assert('linkifyNote href contains the URL', /href="http:\/\/x\.com/.test(ln));
+
+    const sampleItem = { id: 1, cat: '3', pri: '2', tag: 'work', name: 'x', note: '', subtasks: [], estimate: 30 };
+    let itemOut = '', itemThrew = false;
+    try { itemOut = itemHTML({ ...sampleItem, name: '<scr' + 'ipt>alert(1)</scr' + 'ipt>' }); }
+    catch (e) { itemThrew = true; }
+    assert('itemHTML does not throw on hostile name', !itemThrew);
+    assert('itemHTML returns a string', typeof itemOut === 'string');
+    assert('itemHTML escapes hostile name (no live script tag)', !itemOut.includes('<scr' + 'ipt>alert'));
+
+    const sampleOutreach = { id: 1, cat: '1', pri: '2', type: 'email', name: 'x', starred: false, done: false };
+    let outOut = '', outThrew = false;
+    try { outOut = outreachItemHTML({ ...sampleOutreach, name: '<b>x</b>' }); }
+    catch (e) { outThrew = true; }
+    assert('outreachItemHTML does not throw on hostile name', !outThrew);
+    assert('outreachItemHTML escapes name', outOut.includes('&lt;b&gt;') && !outOut.includes('<b>x</b>'));
+  } catch (e) {
+    assert('harness ran without uncaught error: ' + (e && e.message), false);
+  }
+
+  const passed = results.filter(r => r.pass).length;
+  const allPass = passed === results.length;
+  const rows = results.map(r =>
+    '<div style="color:' + (r.pass ? '#7ee2a8' : '#ff9b9b') + '">'
+    + (r.pass ? '✓' : '✗') + ' ' + esc(r.name) + '</div>'
+  ).join('');
+  const panel = document.createElement('div');
+  panel.id = 'selftest-panel';
+  panel.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:12px 16px;'
+    + 'font:13px/1.6 ui-monospace,Menlo,monospace;max-height:100vh;overflow:auto;'
+    + 'background:' + (allPass ? '#0f3d24' : '#4a1212') + ';color:#fff;'
+    + 'box-shadow:0 2px 10px rgba(0,0,0,.45)';
+  panel.innerHTML =
+    '<div style="font-weight:700;font-size:15px;margin-bottom:6px">'
+    + (allPass ? '✓ SELFTEST PASS' : '✗ SELFTEST FAIL')
+    + ' — ' + passed + '/' + results.length + '</div>' + rows;
+  document.body.appendChild(panel);
+}
+
 // ── Init ──────────────────────────────────────────────────
 document.getElementById('f-name').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
 document.getElementById('o-name').addEventListener('keydown', e => { if (e.key === 'Enter') addOutreach(); });
@@ -3068,12 +3143,19 @@ document.getElementById('e-name').addEventListener('keydown', e => { if (e.key =
 updateFocusDisplay();
 // re-render focus bar after layout settles so widths are correct
 setTimeout(updateFocusDisplay, 100);
-applyClockMode();
-loadItems();
-loadOutreach();
-loadErrands();
-loadFocusFromSheet();
-renderRemission();
+
+const _qs = new URLSearchParams(location.search);
+if (_qs.has('selftest')) {
+  // Deterministic, offline: run assertions instead of the network bootstrap.
+  runSelfTest();
+} else {
+  applyClockMode();
+  loadItems();
+  loadOutreach();
+  loadErrands();
+  loadFocusFromSheet();
+  renderRemission();
+}
 </script>
 </body>
 </html>
