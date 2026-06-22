@@ -1008,6 +1008,57 @@ async function apiPost(payload) {
   });
 }
 
+// ── Mutation choke point ──────────────────────────────────
+// commit() is the ONE door for state changes: mutate in-memory → render → persist
+// (via the Chunk-2 queue). apiPost/outreachPost/errandsPost are now internal — call
+// commit/commitAdd/commitDelete instead, never a writer directly. The serialization
+// queue plugs in for free: the writers funnel through enqueueSync, so commit inherits
+// FIFO ordering. Arrows read the live module bindings at call time (items/outreachItems/
+// errandsItems are reassigned on delete; render*/xPost are hoisted), so this is safe.
+const SYNC = {
+  item:     { find: id => items.find(i => i.id === id),
+              add: it => items.unshift(it),
+              drop: id => { items = items.filter(i => i.id !== id); },
+              render: () => render(),         post: apiPost,
+              A: { add: 'add',         update: 'update',         del: 'delete' } },
+  outreach: { find: id => outreachItems.find(i => i.id === id),
+              add: it => outreachItems.unshift(it),
+              drop: id => { outreachItems = outreachItems.filter(i => i.id !== id); },
+              render: () => renderOutreach(), post: outreachPost,
+              A: { add: 'addOutreach', update: 'updateOutreach', del: 'deleteOutreach' } },
+  errand:   { find: id => errandsItems.find(i => i.id === id),
+              add: it => errandsItems.unshift(it),
+              drop: id => { errandsItems = errandsItems.filter(i => i.id !== id); },
+              render: () => renderErrands(),  post: errandsPost,
+              A: { add: 'addErrand',   update: 'updateErrand',   del: 'deleteErrand' } },
+};
+
+// id may be an id OR the object itself (callers that already hold the reference, e.g.
+// cross-array moves and bulk loops, pass the object so lookup-order never matters).
+// commit() is synchronous up to the return: it mutates + renders immediately, then
+// returns the queued post promise — so `const p = commit(...); extraRender(); await p;`
+// preserves a render-before-network order when a site needs extra sync work.
+function commit(entity, id, patch = {}, opts = {}) {
+  const E = SYNC[entity];
+  const obj = (id !== null && typeof id === 'object') ? id : E.find(id);
+  if (!obj) return Promise.resolve();
+  Object.assign(obj, patch);
+  if (opts.render !== false) E.render();
+  return E.post({ action: E.A.update, item: obj });
+}
+function commitAdd(entity, item, opts = {}) {
+  const E = SYNC[entity];
+  E.add(item);
+  if (opts.render !== false) E.render();
+  return E.post({ action: E.A.add, item });
+}
+function commitDelete(entity, id, opts = {}) {
+  const E = SYNC[entity];
+  E.drop(id);
+  if (opts.render !== false) E.render();
+  return E.post({ action: E.A.del, id });
+}
+
 // ── Actions ───────────────────────────────────────────────
 function flashBtn(el) {
   if (!el) return;
@@ -1053,7 +1104,6 @@ async function addItem() {
     lastCompleted:    '',
     nextRecurAt:      '',
   };
-  items.unshift(item);
   document.getElementById('f-name').value = '';
   addStarred = false;
   addRevenue = false;
@@ -1063,8 +1113,7 @@ async function addItem() {
   btn.style.background  = 'none';
   toggleAddRevenue(); toggleAddRevenue(); // reset visual
   flashBtn(document.querySelector('.add-btn'));
-  render();
-  await apiPost({ action: 'add', item });
+  await commitAdd('item', item);
 }
 
 async function toggle(id, e) {
@@ -1095,17 +1144,14 @@ async function toggle(id, e) {
   } else if (!item.cleared && item.recurring && item.snoozedUntil) {
     item.snoozedUntil = '';
   }
-  render();
-  await apiPost({ action: 'update', item });
+  await commit('item', id);   // fields already mutated in place above
 }
 
 async function toggleRevenue(id, e) {
   e.stopPropagation();
   const item = items.find(i => i.id === id);
   if (!item) return;
-  item.revenue = !item.revenue;
-  render();
-  await apiPost({ action: 'update', item });
+  await commit('item', id, { revenue: !item.revenue });
 }
 
 function toggleRevenueEdit(id) {
@@ -1119,16 +1165,14 @@ function toggleRevenueEdit(id) {
     btn.textContent = item.revenue ? '$ Revenue item — tap to unmark' : '$ Mark as revenue impact';
     btn.style.fontSize = '12px';
   }
-  // Re-render the row badge without closing edit panel
-  apiPost({ action: 'update', item });
+  // Persist the in-place revenue toggle without closing/rebuilding the edit panel
+  commit('item', id, {}, { render: false });   // fire-and-forget; field already toggled
 }
 
 async function del(id, e) {
   e.stopPropagation();
-  items = items.filter(i => i.id !== id);
   if (expandedId === id) expandedId = null;
-  render();
-  await apiPost({ action: 'delete', id });
+  await commitDelete('item', id);
 }
 
 async function archiveAllCleared() {
@@ -1152,8 +1196,10 @@ async function archiveAllCleared() {
   render();
   renderArchiveBucket();
   renderArchivedOutreachPanel();
-  for (const item of clearedTasks) await apiPost({ action: 'update', item });
-  for (const o of archivedContacts) await outreachPost({ action: 'deleteOutreach', id: o.id });
+  // Objects already filtered out of their arrays + flagged above → pass the object so
+  // commit/commitDelete never re-look-up a now-absent id; render already happened.
+  for (const it of clearedTasks)  await commit('item', it, {}, { render: false });
+  for (const o of archivedContacts) await commitDelete('outreach', o.id, { render: false });
 }
 
 async function clearArchive() {
@@ -1163,7 +1209,7 @@ async function clearArchive() {
   archivedItems = [];
   renderArchiveBucket();
   for (const item of toDelete) {
-    await apiPost({ action: 'delete', id: item.id });
+    await commitDelete('item', item.id, { render: false });   // already out of items[]; renderArchiveBucket above
   }
 }
 
@@ -1275,10 +1321,9 @@ async function changePri(id, dir, e) {
         badgeEl.className = 'pri-badge badge ' + (classes[item.pri] || '');
       }
     }
-    // Don't apiPost yet — saveEdit will handle it
+    // Don't persist yet — saveEdit will handle it
   } else {
-    render();
-    await apiPost({ action: 'update', item });
+    await commit('item', id);   // pri already applied in place above
   }
 }
 
@@ -1308,10 +1353,9 @@ async function toggleStar(id, e) {
       if (starEl) starEl.classList.toggle('on', item.starred);
     }
     updateLoadCounter();
-    // Don't apiPost yet — saveEdit will handle it
+    // Don't persist yet — saveEdit will handle it
   } else {
-    render();
-    await apiPost({ action: 'update', item });
+    await commit('item', id);   // starred already toggled in place above
   }
 }
 
@@ -1347,27 +1391,26 @@ async function saveEdit(id) {
   expandedSnapshot = null; // commit changes
   const item = items.find(i => i.id === id);
   if (!item) return;
-  item.name    = document.getElementById('edit-name-' + id).value.trim() || item.name;
-  item.cat      = document.getElementById('edit-cat-'  + id).value;
-  item.deadline    = document.getElementById('edit-deadline-' + id).value || '';
-  item.snoozedUntil    = document.getElementById('edit-snooze-' + id).value || '';
-  item.recurring       = document.getElementById('edit-recurring-' + id).value || '';
+  const name    = document.getElementById('edit-name-' + id).value.trim() || item.name;
+  const cat      = document.getElementById('edit-cat-'  + id).value;
+  const deadline    = document.getElementById('edit-deadline-' + id).value || '';
+  const snoozedUntil    = document.getElementById('edit-snooze-' + id).value || '';
+  const recurring       = document.getElementById('edit-recurring-' + id).value || '';
   const nextRecEl      = document.getElementById('edit-nextrec-' + id);
-  item.nextRecurAt     = nextRecEl ? nextRecEl.value : '';
+  const nextRecurAt    = nextRecEl ? nextRecEl.value : '';
   const newDelegatedTo    = (document.getElementById('edit-delegatedto-' + id).value || '').trim();
   const newDelegationDate = document.getElementById('edit-delegationexpiry-' + id).value || '';
   if (newDelegatedTo && !newDelegationDate) {
     alert('Please set a check-back date when delegating — otherwise it will never come back to you.');
     return;
   }
-  item.delegatedTo      = newDelegatedTo;
-  item.delegated        = !!(newDelegatedTo && newDelegationDate);
-  item.delegationExpiry = newDelegationDate;
-  item.tag     = document.getElementById('edit-tag-'  + id).value;
-  // pri already updated in-place via selectPri
+  const delegatedTo      = newDelegatedTo;
+  const delegated        = !!(newDelegatedTo && newDelegationDate);
+  const delegationExpiry = newDelegationDate;
+  const tag     = document.getElementById('edit-tag-'  + id).value;
+  // pri already updated in-place via selectPri — rides along on the object
   expandedId = null;
-  render();
-  await apiPost({ action: 'update', item });
+  await commit('item', id, { name, cat, deadline, snoozedUntil, recurring, nextRecurAt, delegatedTo, delegated, delegationExpiry, tag });
 }
 
 // ── Filters ───────────────────────────────────────────────
@@ -2017,8 +2060,7 @@ async function addOutreach() {
   for (const name of names) {
     const item = { id: Date.now() + Math.random(), name, type, cat:'3', pri:'2', starred:outreachAddStarred, done:false, archived:false, added: new Date().toISOString().slice(0,10) };
     item.id = Math.floor(item.id);
-    outreachItems.unshift(item);
-    await outreachPost({ action: 'addOutreach', item });
+    await commitAdd('outreach', item, { render: false });   // render once after the loop
   }
   document.getElementById('o-name').value = '';
   outreachAddStarred = false;
@@ -2033,14 +2075,14 @@ async function toggleOutreachDone(id, e) {
   if (e) e.stopPropagation();
   const o = outreachItems.find(x => x.id === id);
   if (!o) return;
-  // Immediately archive — no done limbo
-  o.done     = true;
-  o.archived = true;
+  // Immediately archive — no done limbo. Pass the object + render:false so the lookup
+  // never races the array shuffle; do the cross-array move + panel renders manually.
+  const p = commit('outreach', o, { done: true, archived: true }, { render: false });
   archivedOutreachItems.unshift(o);
   outreachItems = outreachItems.filter(x => x.id !== id);
   renderOutreach();
   renderArchivedOutreachPanel();
-  await outreachPost({ action: 'updateOutreach', item: o });
+  await p;
 }
 
 async function cycleOutreachCat(id, e) {
@@ -2048,27 +2090,21 @@ async function cycleOutreachCat(id, e) {
   const o = outreachItems.find(x => x.id === id);
   if (!o) return;
   const idx = O_CAT_CYCLE.indexOf(o.cat);
-  o.cat = O_CAT_CYCLE[(idx + 1) % O_CAT_CYCLE.length];
-  renderOutreach();
-  await outreachPost({ action: 'updateOutreach', item: o });
+  await commit('outreach', id, { cat: O_CAT_CYCLE[(idx + 1) % O_CAT_CYCLE.length] });
 }
 
 async function toggleOutreachRevenue(id, e) {
   e.stopPropagation();
   const o = outreachItems.find(x => x.id === id);
   if (!o) return;
-  o.revenue = !o.revenue;
-  renderOutreach();
-  await outreachPost({ action: 'updateOutreach', item: o });
+  await commit('outreach', id, { revenue: !o.revenue });
 }
 
 async function toggleOutreachStar(id, e) {
   e.stopPropagation();
   const o = outreachItems.find(x => x.id === id);
   if (!o) return;
-  o.starred = !o.starred;
-  renderOutreach();
-  await outreachPost({ action: 'updateOutreach', item: o });
+  await commit('outreach', id, { starred: !o.starred });
 }
 
 async function cycleOutreachType(id, e) {
@@ -2077,9 +2113,7 @@ async function cycleOutreachType(id, e) {
   if (!o) return;
   const cycle = ['call','email','linkedin'];
   const idx = cycle.indexOf(o.type);
-  o.type = cycle[(idx + 1) % cycle.length];
-  renderOutreach();
-  await outreachPost({ action: 'updateOutreach', item: o });
+  await commit('outreach', id, { type: cycle[(idx + 1) % cycle.length] });
 }
 
 async function changeOutreachPri(id, dir, e) {
@@ -2087,9 +2121,7 @@ async function changeOutreachPri(id, dir, e) {
   const o = outreachItems.find(x => x.id === id);
   if (!o) return;
   const cur = parseInt(o.pri || '2');
-  o.pri = dir === 'up' ? String(Math.max(0, cur-1)) : String(Math.min(3, cur+1));
-  renderOutreach();
-  await outreachPost({ action: 'updateOutreach', item: o });
+  await commit('outreach', id, { pri: dir === 'up' ? String(Math.max(0, cur-1)) : String(Math.min(3, cur+1)) });
 }
 
 async function pingOutreach(id, e) {
@@ -2116,9 +2148,8 @@ async function pingOutreach(id, e) {
   // Just now
   nowBtn.addEventListener('click', async function(ev) {
     ev.stopPropagation();
-    o.lastPinged = new Date().toISOString();
     flashBtn(nowBtn);
-    await outreachPost({ action: 'updateOutreach', item: o });
+    await commit('outreach', o, { lastPinged: new Date().toISOString() }, { render: false });
     renderOutreach();
   });
 
@@ -2137,10 +2168,7 @@ async function pingOutreach(id, e) {
     input.focus();
     async function confirmPing() {
       const val = input.value;
-      if (val) {
-        o.lastPinged = new Date(val).toISOString();
-        await outreachPost({ action: 'updateOutreach', item: o });
-      }
+      if (val) await commit('outreach', o, { lastPinged: new Date(val).toISOString() }, { render: false });
       renderOutreach();
     }
     input.addEventListener('change', confirmPing);
@@ -2176,10 +2204,7 @@ async function setPingDate(id, e) {
 
   async function confirmPing() {
     const val = input.value;
-    if (val) {
-      o.lastPinged = new Date(val).toISOString();
-      await outreachPost({ action: 'updateOutreach', item: o });
-    }
+    if (val) await commit('outreach', o, { lastPinged: new Date(val).toISOString() }, { render: false });
     renderOutreach();
   }
   input.addEventListener('change', confirmPing);
@@ -2205,9 +2230,7 @@ function formatPingAgo(ts) {
 
 async function deleteOutreach(id, e) {
   e.stopPropagation();
-  outreachItems = outreachItems.filter(x => x.id !== id);
-  renderOutreach();
-  await outreachPost({ action: 'deleteOutreach', id });
+  await commitDelete('outreach', id);
 }
 
 
@@ -2217,13 +2240,14 @@ async function deleteOutreach(id, e) {
 async function restoreOutreach(id) {
   const o = archivedOutreachItems.find(x => x.id === id);
   if (!o) return;
-  o.archived = false;
-  o.done     = false;
+  // Restore from archive: pass the object + render:false, then do the cross-array move
+  // and panel renders manually so lookup never races the shuffle.
+  const p = commit('outreach', o, { archived: false, done: false }, { render: false });
   archivedOutreachItems = archivedOutreachItems.filter(x => x.id !== id);
   outreachItems.unshift(o);
   renderOutreach();
   renderArchivedOutreachPanel();
-  await outreachPost({ action: 'updateOutreach', item: o });
+  await p;
 }
 
 function renderArchivedOutreachPanel() {
@@ -2247,9 +2271,7 @@ function autoStarUnsnoozedOutreach() {
   const now = new Date();
   outreachItems.forEach(o => {
     if (o.snoozedUntil && new Date(o.snoozedUntil) <= now) {
-      o.snoozedUntil = '';
-      o.starred = true;
-      outreachPost({ action: 'updateOutreach', item: o });
+      commit('outreach', o, { snoozedUntil: '', starred: true }, { render: false });   // fire-and-forget
     }
   });
 }
@@ -2263,8 +2285,7 @@ async function snoozeOutreach(id, e) {
 
   // If already snoozed, clear it
   if (o.snoozedUntil && new Date(o.snoozedUntil) > new Date()) {
-    o.snoozedUntil = '';
-    await outreachPost({ action: 'updateOutreach', item: o });
+    await commit('outreach', o, { snoozedUntil: '' }, { render: false });
     renderOutreach();
     return;
   }
@@ -2284,10 +2305,7 @@ async function snoozeOutreach(id, e) {
     if (snoozeDone) return;
     snoozeDone = true;
     const val = input.value;
-    if (val) {
-      o.snoozedUntil = val;
-      await outreachPost({ action: 'updateOutreach', item: o });
-    }
+    if (val) await commit('outreach', o, { snoozedUntil: val }, { render: false });
     renderOutreach();
   }
   input.addEventListener('change', confirmSnooze);
@@ -2315,7 +2333,7 @@ function editOutreachName(id, e) {
     const val = input.value.trim();
     if (val) o.name = val;
     renderOutreach();
-    if (val) await outreachPost({ action: 'updateOutreach', item: o });
+    if (val) await commit('outreach', o, {}, { render: false });   // name set; render above
   }
   input.addEventListener('blur', save);
   input.addEventListener('keydown', function(ev) {
@@ -2485,12 +2503,7 @@ let delegatedCollapsed = true;
 async function recallDelegated(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
-  item.delegated        = false;
-  item.starred          = true;
-  item.pri              = '1'; // bump to High priority
-  item.delegationExpiry = '';
-  render();
-  await apiPost({ action: 'update', item });
+  await commit('item', id, { delegated: false, starred: true, pri: '1', delegationExpiry: '' });   // pri bumped to High
 }
 
 function autoCheckDelegations() {
@@ -2500,11 +2513,8 @@ function autoCheckDelegations() {
     if (!i.delegated) return;
     const shouldRecall = !i.delegationExpiry || new Date(i.delegationExpiry + 'T12:00:00') <= now;
     if (shouldRecall) {
-      i.delegated = false;
-      i.starred   = true;
-      i.pri       = '1';
-      changed     = true;
-      apiPost({ action: 'update', item: i });
+      changed = true;
+      commit('item', i, { delegated: false, starred: true, pri: '1' }, { render: false });   // fire-and-forget; render once below
     }
   });
   if (changed) render();
@@ -2564,20 +2574,18 @@ async function sendToRemission(id, e) {
   e.stopPropagation();
   const item = items.find(i => i.id === id);
   if (!item) return;
-  item.remission = true;
   if (expandedId === id) expandedId = null;
-  render();
-  renderRemission();
-  await apiPost({ action: 'update', item });
+  const p = commit('item', id, { remission: true });   // mutate + render(main) synchronously, returns post promise
+  renderRemission();                                    // extra panel, with remission flag already set
+  await p;
 }
 
 async function restoreFromRemission(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
-  item.remission = false;
-  render();
+  const p = commit('item', id, { remission: false });
   renderRemission();
-  await apiPost({ action: 'update', item });
+  await p;
 }
 
 function toggleRemission() {
@@ -2631,9 +2639,7 @@ async function cycleErrandType(id, e) {
   e.stopPropagation();
   const o = errandsItems.find(x => x.id === id);
   if (!o) return;
-  o.type = o.type === 'errand' ? 'shopping' : 'errand';
-  renderErrands();
-  await errandsPost({ action: 'updateErrand', item: o });
+  await commit('errand', id, { type: o.type === 'errand' ? 'shopping' : 'errand' });
 }
 let errandsCollapsed = false;
 
@@ -2691,8 +2697,7 @@ async function addErrands() {
   for (const name of names) {
     const etype = document.getElementById('e-type') ? document.getElementById('e-type').value : 'errand';
     const item = { id: Math.floor(Date.now() + Math.random()*1000), name, pri:'2', starred:false, done:false, archived:false, added: new Date().toISOString().slice(0,10), type: etype, note: '' };
-    errandsItems.unshift(item);
-    await errandsPost({ action: 'addErrand', item });
+    await commitAdd('errand', item, { render: false });   // render once after the loop
   }
   document.getElementById('e-name').value = '';
   renderErrands();
@@ -2702,18 +2707,14 @@ async function toggleErrandDone(id, e) {
   e.stopPropagation();
   const o = errandsItems.find(x => x.id === id);
   if (!o) return;
-  o.done = !o.done;
-  renderErrands();
-  await errandsPost({ action: 'updateErrand', item: o });
+  await commit('errand', id, { done: !o.done });
 }
 
 async function toggleErrandStar(id, e) {
   e.stopPropagation();
   const o = errandsItems.find(x => x.id === id);
   if (!o) return;
-  o.starred = !o.starred;
-  renderErrands();
-  await errandsPost({ action: 'updateErrand', item: o });
+  await commit('errand', id, { starred: !o.starred });
 }
 
 async function changeErrandPri(id, dir, e) {
@@ -2721,16 +2722,12 @@ async function changeErrandPri(id, dir, e) {
   const o = errandsItems.find(x => x.id === id);
   if (!o) return;
   const cur = parseInt(o.pri || '2');
-  o.pri = dir === 'up' ? String(Math.max(0, cur-1)) : String(Math.min(3, cur+1));
-  renderErrands();
-  await errandsPost({ action: 'updateErrand', item: o });
+  await commit('errand', id, { pri: dir === 'up' ? String(Math.max(0, cur-1)) : String(Math.min(3, cur+1)) });
 }
 
 async function deleteErrand(id, e) {
   e.stopPropagation();
-  errandsItems = errandsItems.filter(x => x.id !== id);
-  renderErrands();
-  await errandsPost({ action: 'deleteErrand', id });
+  await commitDelete('errand', id);
 }
 
 async function archiveErrands() {
@@ -2738,7 +2735,8 @@ async function archiveErrands() {
   toArchive.forEach(o => { o.archived = true; });
   errandsItems = errandsItems.filter(o => !o.done);
   renderErrands();
-  for (const o of toArchive) await errandsPost({ action: 'updateErrand', item: o });
+  // already filtered out + flagged → pass the object; render done above
+  for (const o of toArchive) await commit('errand', o, {}, { render: false });
 }
 
 function editErrandName(id, e) {
@@ -2756,7 +2754,7 @@ function editErrandName(id, e) {
     const val = input.value.trim();
     if (val) o.name = val;
     renderErrands();
-    if (val) await errandsPost({ action: 'updateErrand', item: o });
+    if (val) await commit('errand', o, {}, { render: false });   // name set; render above
   }
   input.addEventListener('blur', save);
   input.addEventListener('keydown', function(ev) {
@@ -2836,8 +2834,7 @@ function addSubtasks(id) {
   });
   input.value = '';
   expandedId = id;
-  render();
-  apiPost({ action: 'update', item });
+  commit('item', id);   // fire-and-forget; subtasks already mutated in place, commit renders + persists
 }
 
 function toggleSubtask(itemId, subId) {
@@ -2848,8 +2845,7 @@ function toggleSubtask(itemId, subId) {
   sub.done = !sub.done;
   item.subtasks.sort((a,b) => (a.done ? 1 : 0) - (b.done ? 1 : 0));
   expandedId = itemId;
-  render();
-  apiPost({ action: 'update', item });
+  commit('item', itemId);   // fire-and-forget
 }
 
 function deleteSubtask(itemId, subId) {
@@ -2857,8 +2853,7 @@ function deleteSubtask(itemId, subId) {
   if (!item) return;
   item.subtasks = item.subtasks.filter(s => s.id !== subId);
   expandedId = itemId;
-  render();
-  apiPost({ action: 'update', item });
+  commit('item', itemId);   // fire-and-forget
 }
 
 function updateNextRecurAt(id) {
@@ -2893,7 +2888,7 @@ function editSubtaskName(itemId, subId) {
     if (val) sub.name = val;
     expandedId = itemId;
     render();
-    if (val) await apiPost({ action: 'update', item });
+    if (val) await commit('item', itemId, {}, { render: false });   // name already set; render above
   }
   input.addEventListener('blur', save);
   input.addEventListener('keydown', ev => {
@@ -2914,8 +2909,7 @@ function moveSubtask(itemId, subId, dir) {
   item.subtasks[idx] = item.subtasks[newIdx];
   item.subtasks[newIdx] = tmp;
   expandedId = itemId;
-  render();
-  apiPost({ action: 'update', item });
+  commit('item', itemId);   // fire-and-forget
 }
 
 // ── Auto-star on unsnooze ─────────────────────────────────
@@ -2924,11 +2918,9 @@ function autoStarUnsnoozed() {
   let changed = false;
   items.forEach(i => {
     if (i.snoozedUntil && new Date(i.snoozedUntil) <= now) {
-      i.snoozedUntil = '';
-      i.starred  = true;
-      i.cleared  = false; // ensure recurring tasks come back active
-      changed    = true;
-      apiPost({ action: 'update', item: i });
+      changed = true;
+      // ensure recurring tasks come back active; fire-and-forget, caller renders
+      commit('item', i, { snoozedUntil: '', starred: true, cleared: false }, { render: false });
     }
   });
   return changed;
@@ -2938,10 +2930,8 @@ function autoStarUnsnoozed() {
 async function clearSnooze(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
-  item.snoozedUntil = '';
   expandedId = id;
-  render();
-  await apiPost({ action: 'update', item });
+  await commit('item', id, { snoozedUntil: '' });
 }
 
 // ── Time estimates ────────────────────────────────────────
@@ -2950,7 +2940,7 @@ async function setEstimate(id, val) {
   if (!item) return;
   item.estimate = parseInt(val) || 0;
   updateLoadCounter();
-  await apiPost({ action: 'update', item });
+  await commit('item', id, {}, { render: false });   // estimate set in place; no list render (load counter only)
 }
 
 function updateLoadCounter() {
@@ -3018,21 +3008,16 @@ function renderSnoozedPanel() {
 async function clearItemSnooze(id) {
   const item = items.find(i => i.id === id);
   if (!item) return;
-  item.snoozedUntil = '';
-  item.starred  = true;
-  item.cleared  = false;
-  render();
-  await apiPost({ action: 'update', item });
+  await commit('item', id, { snoozedUntil: '', starred: true, cleared: false });
 }
 
 async function clearContactSnooze(id) {
   const o = outreachItems.find(x => x.id === id);
   if (!o) return;
-  o.snoozedUntil = '';
-  o.starred = true;
+  const p = commit('outreach', o, { snoozedUntil: '', starred: true }, { render: false });   // fields set synchronously
   renderOutreach();
   renderSnoozedPanel();
-  await outreachPost({ action: 'updateOutreach', item: o });
+  await p;
 }
 
 // ── Linkify notes ─────────────────────────────────────────
@@ -3169,6 +3154,65 @@ async function runSelfTest() {
     for (const k of ['itemsCache', 'outreachCache', 'errandsCache']) {
       if (cacheSnapshot[k] === null) localStorage.removeItem(k);
       else localStorage.setItem(k, cacheSnapshot[k]);
+    }
+  }
+
+  // ── Async probe: prove the commit() choke point mutates + renders + persists ──
+  // Same isolation discipline: snapshot the three arrays + three cache keys, stub the
+  // three render fns (reassignable function declarations) and window.fetch, then verify
+  // the one-door flow. Everything restored in finally so ?selftest stays non-destructive.
+  const arrSnap = { items: items.slice(), outreach: outreachItems.slice(), errands: errandsItems.slice() };
+  const cacheSnap2 = {
+    itemsCache: localStorage.getItem('itemsCache'),
+    outreachCache: localStorage.getItem('outreachCache'),
+    errandsCache: localStorage.getItem('errandsCache'),
+  };
+  const realRender = render, realRenderOutreach = renderOutreach, realRenderErrands = renderErrands;
+  const realFetch2 = window.fetch;
+  try {
+    let renderCalls = 0;
+    render = () => { renderCalls++; };           // stub: count list re-renders
+    renderOutreach = () => {};
+    renderErrands = () => {};
+    const posts = [];
+    window.fetch = (url, opts) => { posts.push(JSON.parse(opts.body)); return Promise.resolve({ ok: true }); };
+
+    const sentinel = { id: 990000001, name: 'selftest-sentinel', starred: false, pri: '2', subtasks: [] };
+
+    // commitAdd: unshifts into items AND POSTs action:'add'
+    await commitAdd('item', sentinel);
+    assert('commitAdd unshifts into items', items[0] === sentinel);
+    assert('commitAdd POSTs action:add', posts.some(p => p.action === 'add' && p.item && p.item.id === sentinel.id));
+
+    // commit (id form): mutates the field AND POSTs action:'update', and renders by default
+    const rBefore = renderCalls;
+    await commit('item', sentinel.id, { starred: true });
+    assert('commit mutates field (starred)', sentinel.starred === true);
+    assert('commit POSTs action:update', posts.some(p => p.action === 'update' && p.item && p.item.id === sentinel.id));
+    assert('commit renders by default', renderCalls === rBefore + 1);
+
+    // commit (object form): the object-id branch targets the passed object directly
+    await commit('item', sentinel, { pri: '1' });
+    assert('commit object-form targets the passed object', sentinel.pri === '1' && items.find(i => i.id === sentinel.id) === sentinel);
+
+    // opts.render:false suppresses the render call (spy counter unchanged)
+    const rNoRender = renderCalls;
+    await commit('item', sentinel.id, { name: 'quiet' }, { render: false });
+    assert('opts.render:false suppresses render', renderCalls === rNoRender);
+
+    // commitDelete: removes from items AND POSTs action:'delete'
+    await commitDelete('item', sentinel.id);
+    assert('commitDelete removes from items', !items.some(i => i.id === sentinel.id));
+    assert('commitDelete POSTs action:delete', posts.some(p => p.action === 'delete' && p.id === sentinel.id));
+  } catch (e) {
+    assert('commit probe ran without uncaught error: ' + (e && e.message), false);
+  } finally {
+    render = realRender; renderOutreach = realRenderOutreach; renderErrands = realRenderErrands;
+    window.fetch = realFetch2;
+    items = arrSnap.items; outreachItems = arrSnap.outreach; errandsItems = arrSnap.errands;
+    for (const k of ['itemsCache', 'outreachCache', 'errandsCache']) {
+      if (cacheSnap2[k] === null) localStorage.removeItem(k);
+      else localStorage.setItem(k, cacheSnap2[k]);
     }
   }
 
