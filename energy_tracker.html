@@ -773,6 +773,7 @@ let archivedItems = [];
 let activePills = new Set(['starred']); // default to Today view on load
 let catFilter   = null;   // set when stat box clicked
 let expandedId  = null;
+let expandedSnapshot = null;
 let scriptUrl   = localStorage.getItem('scriptUrl') || '';
 let addStarred  = false;
 let addRevenue  = false;
@@ -1127,7 +1128,7 @@ async function archiveAllCleared() {
   renderArchiveBucket();
   renderArchivedOutreachPanel();
   for (const item of clearedTasks) await apiPost({ action: 'update', item });
-  for (const o of archivedContacts) await apiPost({ action: 'delete', id: o.id });
+  for (const o of archivedContacts) await outreachPost({ action: 'deleteOutreach', id: o.id });
 }
 
 async function clearArchive() {
@@ -1237,8 +1238,23 @@ async function changePri(id, dir, e) {
   if (!item) return;
   const cur = parseInt(item.pri || '2');
   item.pri = dir === 'up' ? String(Math.max(0, cur-1)) : String(Math.min(3, cur+1));
-  render();
-  await apiPost({ action: 'update', item });
+  if (expandedId === id) {
+    // Task is open — update badge in place, save deferred to saveEdit
+    const badges = { '0':'!!','1':'!','2':'','3':'↓' };
+    const classes = { '0':'pri-top','1':'pri-high','2':'','3':'pri-low' };
+    const rowEl = document.getElementById('item-' + id);
+    if (rowEl) {
+      const badgeEl = rowEl.querySelector('.pri-badge');
+      if (badgeEl) {
+        badgeEl.textContent = badges[item.pri] || '';
+        badgeEl.className = 'pri-badge badge ' + (classes[item.pri] || '');
+      }
+    }
+    // Don't apiPost yet — saveEdit will handle it
+  } else {
+    render();
+    await apiPost({ action: 'update', item });
+  }
 }
 
 function selectPri(id, val) {
@@ -1259,22 +1275,51 @@ async function toggleStar(id, e) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   item.starred = !item.starred;
-  render();
-  await apiPost({ action: 'update', item });
+  if (expandedId === id) {
+    // Task is open — update star in place, save deferred to saveEdit
+    const rowEl = document.getElementById('item-' + id);
+    if (rowEl) {
+      const starEl = rowEl.querySelector('.star-btn');
+      if (starEl) starEl.classList.toggle('on', item.starred);
+    }
+    updateLoadCounter();
+    // Don't apiPost yet — saveEdit will handle it
+  } else {
+    render();
+    await apiPost({ action: 'update', item });
+  }
 }
 
 function toggleExpand(id, e) {
   if (e.target.closest('.chk') || e.target.closest('.del-btn') || e.target.closest('.pri-btn') || e.target.closest('.star-btn') || e.target.closest('.cal-btn')) return;
-  expandedId = (expandedId === id) ? null : id;
+  if (expandedId === id) {
+    // Closing without save — restore snapshot
+    if (expandedSnapshot) {
+      const item = items.find(i => i.id === id);
+      if (item) Object.assign(item, expandedSnapshot);
+      expandedSnapshot = null;
+    }
+    expandedId = null;
+  } else {
+    const item = items.find(i => i.id === id);
+    if (item) expandedSnapshot = { pri: item.pri, starred: item.starred };
+    expandedId = id;
+  }
   render();
 }
 
 function cancelEdit() {
+  if (expandedSnapshot && expandedId) {
+    const item = items.find(i => i.id === expandedId);
+    if (item) Object.assign(item, expandedSnapshot);
+    expandedSnapshot = null;
+  }
   expandedId = null;
   render();
 }
 
 async function saveEdit(id) {
+  expandedSnapshot = null; // commit changes
   const item = items.find(i => i.id === id);
   if (!item) return;
   item.name    = document.getElementById('edit-name-' + id).value.trim() || item.name;
@@ -1613,7 +1658,7 @@ function itemHTML(i) {
       <option value="weekly"  ${ i.recurring==='weekly'  ?'selected':''}>Weekly</option>
       <option value="monthly" ${ i.recurring==='monthly' ?'selected':''}>Monthly</option>
     </select>
-    ${i.recurring ? `<div class="edit-label">Next occurrence <span style="font-weight:400;font-size:11px;text-transform:none">(defaults to 8am)</span></div>
+    ${i.recurring ? `<div class="edit-label">Next occurrence <span style="font-weight:400;font-size:11px;text-transform:none">(defaults to 5am)</span></div>
     <input class="edit-field" type="datetime-local" id="edit-nextrec-${i.id}"
       value="${i.nextRecurAt || ''}" style="margin-bottom:8px" />` : ''}
     <div class="edit-label" style="margin-top:8px">Delegated to <span style="font-weight:400;text-transform:none;font-size:11px">(optional — moves task to Delegated panel)</span></div>
@@ -2795,7 +2840,7 @@ function updateNextRecurAt(id) {
   const freq = sel.value;
   if (!freq) return;
   const d = new Date();
-  d.setHours(8, 0, 0, 0);
+  d.setHours(5, 0, 0, 0);
   const delay = freq === 'daily' ? 1 : freq === 'weekly' ? 7 : 30;
   d.setDate(d.getDate() + delay);
   const local = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
