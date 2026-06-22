@@ -127,6 +127,11 @@
 
   /* Pomodoro timer */
   .pomo-bar { background: var(--bg); border-radius: var(--radius-lg); padding: 12px 16px; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .pomo-bar.collapsed .pomo-controls,
+  .pomo-bar.collapsed .pomo-presets,
+  .pomo-bar.collapsed .focus-section { display: none; }
+  .pomo-collapse-btn { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 12px; padding: 2px 6px; border-radius: 4px; margin-left: auto; white-space: nowrap; }
+  .pomo-collapse-btn:hover { background: var(--bg2); color: var(--text); }
   .pomo-display { font-size: 22px; font-weight: 600; letter-spacing: .04em; min-width: 70px; }
   .pomo-status { font-size: 12px; color: var(--text2); min-width: 44px; }
   .pomo-presets { display: flex; gap: 6px; }
@@ -573,9 +578,14 @@
   </div>
 
   <!-- Pomodoro -->
-  <div class="pomo-bar">
-    <div class="pomo-display" id="pomo-display">25:00</div>
-    <div class="pomo-status" id="pomo-status">Ready</div>
+  <div class="pomo-bar" id="pomo-bar-container">
+    <div style="display:flex;align-items:center;gap:8px;width:100%">
+      <div class="pomo-display" id="pomo-display">15:00</div>
+      <div class="pomo-status" id="pomo-status" style="flex:1">Ready</div>
+      <span id="pomo-focus-summary" style="font-size:12px;color:var(--text3)"></span>
+      <button class="pomo-collapse-btn" onclick="togglePomoCollapse()" id="pomo-collapse-btn">▾ Focus</button>
+    </div>
+    <div class="pomo-controls">
     <div class="pomo-presets">
       <button class="pomo-preset active" onclick="setDuration(15)">15 min</button>
       <button class="pomo-preset" onclick="setDuration(30)">30 min</button>
@@ -594,6 +604,7 @@
         <button class="focus-reset-btn" onclick="resetFocusDay()">↺ reset day</button>
       </div>
       <div class="focus-boxes" id="focus-boxes"></div>
+    </div>
     </div>
   </div>
 
@@ -1035,13 +1046,12 @@ async function toggle(id, e) {
   const item = items.find(i => i.id === id);
   if (!item) return;
   item.cleared = !item.cleared;
-  // Auto-reset recurring tasks
+  // Auto-reset recurring tasks — go to snoozed, not cleared
   if (item.cleared && item.recurring) {
     item.lastCompleted = new Date().toISOString().slice(0,10);
-    // Use nextRecurAt if set, otherwise calculate default
     if (item.nextRecurAt) {
       item.snoozedUntil = item.nextRecurAt.slice(0,10);
-      item.nextRecurAt  = ''; // clear after use
+      item.nextRecurAt  = '';
     } else {
       const delay = item.recurring === 'daily'   ? 1
                   : item.recurring === 'weekly'  ? 7
@@ -1050,10 +1060,12 @@ async function toggle(id, e) {
       if (delay > 0) {
         const resetDate = new Date();
         resetDate.setDate(resetDate.getDate() + delay);
-        resetDate.setHours(8, 0, 0, 0);
+        resetDate.setHours(5, 0, 0, 0);
         item.snoozedUntil = resetDate.toISOString().slice(0,10);
       }
     }
+    // Don't stay in cleared — move directly to snoozed
+    item.cleared = false;
   } else if (!item.cleared && item.recurring && item.snoozedUntil) {
     item.snoozedUntil = '';
   }
@@ -1653,6 +1665,7 @@ function itemHTML(i) {
           <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}" style="text-transform:none;letter-spacing:0">${i.tag === 'work' ? 'Work' : 'Personal'}</span>
           ${i.recurring ? `<span class="recur-badge">🔁 ${i.recurring}</span>` : ''}
           ${deadlineHTML(i)}
+          ${i.note ? `<span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">${linkifyNote(i.note)}</span>` : ''}
           ${i.snoozedUntil && new Date(i.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5">💤 until ${new Date(i.snoozedUntil).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
           ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
         </div>
@@ -1680,6 +1693,7 @@ function itemHTML(i) {
 
 // ── Pomodoro ──────────────────────────────────────────────
 let pomoSecs = 15*60, pomoRunning = false, pomoInterval = null, pomoDuration = 15;
+let pomoCollapsed = false;
 
 // ── Focus tracking ───────────────────────────────────────
 // Sessions stored as array of {mins, duration} per day
@@ -1707,6 +1721,14 @@ function endFocusSession() {
   sessionStartSecs = null;
 }
 
+function togglePomoCollapse() {
+  pomoCollapsed = !pomoCollapsed;
+  const bar = document.getElementById('pomo-bar-container');
+  if (bar) bar.classList.toggle('collapsed', pomoCollapsed);
+  const btn = document.getElementById('pomo-collapse-btn');
+  if (btn) btn.textContent = pomoCollapsed ? '▸ Focus' : '▾ Focus';
+}
+
 function resetFocusDay() {
   localStorage.removeItem(todayKey());
   localStorage.setItem('focusResetAt', Date.now().toString());
@@ -1719,8 +1741,11 @@ function updateFocusDisplay() {
 
   // Label
   const h = Math.floor(totalMins / 60), m = totalMins % 60;
-  document.getElementById('focus-total-display').textContent =
-    (h > 0 ? h + 'h ' : '') + m + 'm focus today';
+  const focusLabel = (h > 0 ? h + 'h ' : '') + m + 'm focus today';
+  document.getElementById('focus-total-display').textContent = focusLabel;
+  // Also update collapsed summary
+  const summary = document.getElementById('pomo-focus-summary');
+  if (summary) summary.textContent = totalMins > 0 ? focusLabel : '';
 
   // 10 boxes × 30 min = 5 hrs max — each box fills incrementally
   const BOXES = 10;
@@ -2825,10 +2850,10 @@ function autoStarUnsnoozed() {
   let changed = false;
   items.forEach(i => {
     if (i.snoozedUntil && new Date(i.snoozedUntil) <= now) {
-      // Snooze has expired — clear it and star the item
       i.snoozedUntil = '';
-      i.starred = true;
-      changed = true;
+      i.starred  = true;
+      i.cleared  = false; // ensure recurring tasks come back active
+      changed    = true;
       apiPost({ action: 'update', item: i });
     }
   });
