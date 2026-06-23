@@ -1404,12 +1404,13 @@ function togglePill(pill) {
 }
 
 function setStatFilter(cat) {
+  const wasToday = activePills.has('starred');
   if (catFilter === cat) {
     catFilter = null;
-    activePills = new Set(['all']);
+    activePills = new Set(wasToday ? ['starred'] : ['all']);
   } else {
     catFilter = cat;
-    activePills = new Set();
+    activePills = new Set(wasToday ? ['starred'] : []);
   }
   updateFilterUI();
   render();
