@@ -799,7 +799,7 @@ const html = (strs, ...vals) => strs.reduce((out, s, i) =>
 // ── Build stamp ───────────────────────────────────────────
 // Plain editable date string — no build step in a single-file app. AGENTS.md instructs
 // bumping it on every change. Surfaced in bug reports and the ?debug panel.
-const BUILD = '2026-06-22-2';   // bump on every change; stamped into every bug report
+const BUILD = '2026-06-23';   // bump on every change; stamped into every bug report
 
 // ── State ─────────────────────────────────────────────────
 let offClock = localStorage.getItem('offClock') === 'true';
@@ -948,8 +948,10 @@ const C = {
   id:    v => Number(v),
   str:   v => v || '',
   strD:  d => v => v || d,
+  strW:  d => v => String(v || d),
   bool:  v => v === true || String(v).toUpperCase() === 'TRUE',
   num:   d => v => v ? Number(v) : d,
+  estimate: d => v => (v === undefined || v === null || v === '') ? d : Number(v),
   date:  v => /\d{4}-\d{2}-\d{2}/.test(v || '') ? String(v).slice(0,10) : '',  // strict (item)
   date10: v => (v || '').slice(0,10),                                          // loose (outreach/errand `added`)
   slice10: v => v ? String(v).slice(0,10) : '',                               // item lastCompleted
@@ -962,13 +964,13 @@ const ITEM_FIELDS = [
   ['id', C.id], ['name', C.str], ['cat', C.catItem], ['tag', C.strD('work')],
   ['note', C.str], ['cleared', C.bool], ['added', C.date], ['pri', C.pri],
   ['deadline', C.date], ['starred', C.bool], ['archived', C.bool], ['archivedAt', C.str],
-  ['subtasks', C.subtasks], ['estimate', C.num(30)],  /* drift fix: was 0 on load, 30 on add → 30 */
+  ['subtasks', C.subtasks], ['estimate', C.estimate(30)],  /* drift fix: was 0 on load, 30 on add → 30 */
   ['remission', C.bool], ['snoozedUntil', C.date], ['revenue', C.bool],
   ['delegated', C.bool], ['delegatedTo', C.str], ['delegationExpiry', C.date],
   ['recurring', C.str], ['lastCompleted', C.slice10], ['nextRecurAt', C.str],
 ];
 const OUTREACH_FIELDS = [
-  ['id', C.id], ['name', C.str], ['type', C.strD('call')], ['cat', C.strD('3')],
+  ['id', C.id], ['name', C.str], ['type', C.strD('call')], ['cat', C.strW('3')],
   ['pri', C.pri], ['starred', C.bool], ['done', C.bool], ['archived', C.bool],
   ['archivedAt', C.str], ['added', C.date10], ['lastPinged', C.str],
   ['snoozedUntil', C.date], ['revenue', C.bool],
@@ -3399,9 +3401,13 @@ async function runSelfTest() {
 
     // Round-trip fidelity: representative coercions, covering the drift fields.
     assert('normalize coerces estimate string → number', normalize({ estimate: '45' }).estimate === 45);
+    assert('normalize preserves explicit estimate 0', normalize({ estimate: 0 }).estimate === 0);
+    assert('normalize preserves explicit estimate string 0', normalize({ estimate: '0' }).estimate === 0);
     assert('normalize clamps out-of-range cat → 3', normalize({ cat: '9' }).cat === '3');
     assert('normalize coerces TRUE string → bool', normalize({ starred: 'TRUE' }).starred === true);
     assert('normalizeOutreach coerces revenue TRUE → bool', normalizeOutreach({ revenue: 'TRUE' }).revenue === true);
+    assert('normalizeOutreach coerces numeric cat 2 → string', normalizeOutreach({ cat: 2 }).cat === '2');
+    assert('normalizeOutreach coerces numeric cat 1 → string', normalizeOutreach({ cat: 1 }).cat === '1');
     assert('normalizeErrand defaults type → errand', normalizeErrand({}).type === 'errand');
 
     // Idempotency: coercers are stable, so a second pass changes nothing.
@@ -3414,6 +3420,15 @@ async function runSelfTest() {
     // object now ships the previously-omitted lastPinged/snoozedUntil/revenue fields.
     assert('drift fix: item blank estimate defaults to 30', ib.estimate === 30);
     const ob = blankFromSchema(OUTREACH_FIELDS);
+    assert('outreach blank has every registry key',
+      eq(Object.keys(ob), OUTREACH_FIELDS.map(f => f[0])));
+    assert('outreach blank has no undefined (id is NaN, not undefined)',
+      Number.isNaN(ob.id) && Object.entries(ob).every(([k, v]) => k === 'id' || v !== undefined));
+    const eb = blankFromSchema(ERRAND_FIELDS);
+    assert('errand blank has every registry key',
+      eq(Object.keys(eb), ERRAND_FIELDS.map(f => f[0])));
+    assert('errand blank has no undefined (id is NaN, not undefined)',
+      Number.isNaN(eb.id) && Object.entries(eb).every(([k, v]) => k === 'id' || v !== undefined));
     assert('drift fix: outreach blank ships lastPinged/snoozedUntil/revenue',
       'lastPinged' in ob && 'snoozedUntil' in ob && 'revenue' in ob);
   } catch (e) {
