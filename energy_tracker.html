@@ -843,9 +843,11 @@ initTheme();
 // ── Clock mode ────────────────────────────────────────────
 function toggleTodayHeader() {
   if (activePills.has('starred')) {
-    activePills = new Set(['all']);
+    activePills.delete('starred');
+    if (!activePills.size) activePills = new Set(['all']);
   } else {
-    activePills = new Set(['starred']);
+    activePills.delete('all');
+    activePills.add('starred');
   }
   // Update button immediately before any re-render
   const btn = document.getElementById('today-hdr-btn');
@@ -1466,7 +1468,7 @@ function visible() {
     if (!pass && !work && !pers && (pri || star)) pass = true;
 
     // Secondary filters
-    if (pri  && !(parseInt(i.pri || '2') < 2)) return false;
+    if (pri  && i.pri !== '0') return false; // !! Top priority only
     if (star && !i.starred)                    return false;
 
     return pass;
@@ -1500,12 +1502,16 @@ function sortItems(arr) {
 // Today view: group by priority tier with section headers
 function renderTodayView(vis) {
   const PRI_LABELS = { '0':'!! Top priority', '1':'! High priority', '2':'Normal', '3':'↓ Low priority' };
-  let html = '<div id="delegated-anchor"></div>';
+  let html = '';
   const activeVis  = vis.filter(i => !i.cleared);
   const clearedVis = vis.filter(i =>  i.cleared);
   ['0','1','2','3'].forEach(p => {
     const group = activeVis.filter(i => (i.pri||'2') === p);
-    if (!group.length) return;
+    if (!group.length) {
+      // Inject delegated anchor after !! Top even if empty
+      if (p === '0') html += '<div id="delegated-anchor"></div>';
+      return;
+    }
     const sorted = group.slice().sort((a,b) => {
       if (a.cleared !== b.cleared) return a.cleared ? 1 : -1;
       const ca = CAT_SORT_ORDER[a.cat]??2, cb = CAT_SORT_ORDER[b.cat]??2;
@@ -1514,6 +1520,8 @@ function renderTodayView(vis) {
     });
     html += `<div class="section-hdr" style="color:var(--text2)">${PRI_LABELS[p]}</div>`;
     sorted.forEach(i => { html += itemHTML(i); });
+    // Inject delegated panel after !! Top priority group
+    if (p === '0') html += '<div id="delegated-anchor"></div>';
   });
   if (clearedVis && clearedVis.length) {
     html += '<div class="section-hdr" style="color:var(--text3)">✓ Cleared</div>';
