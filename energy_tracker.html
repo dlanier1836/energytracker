@@ -744,7 +744,6 @@
   <div id="list"></div>
   <div id="archive-bucket"></div>
   <div id="reflection-bucket"></div>
-  <div id="delegated-bottom-bucket"></div>
   <div id="snoozed-bucket"></div>
 
 </div>
@@ -1501,7 +1500,7 @@ function sortItems(arr) {
 // Today view: group by priority tier with section headers
 function renderTodayView(vis) {
   const PRI_LABELS = { '0':'!! Top priority', '1':'! High priority', '2':'Normal', '3':'↓ Low priority' };
-  let html = '';
+  let html = '<div id="delegated-anchor"></div>';
   const activeVis  = vis.filter(i => !i.cleared);
   const clearedVis = vis.filter(i =>  i.cleared);
   ['0','1','2','3'].forEach(p => {
@@ -1750,7 +1749,7 @@ function itemHTML(i) {
           ${i.recurring ? `<span class="recur-badge">🔁 ${i.recurring}</span>` : ''}
           ${deadlineHTML(i)}
           ${i.note ? `<span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">${linkifyNote(i.note)}</span>` : ''}
-          ${i.snoozedUntil && new Date(i.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5">💤 until ${new Date(i.snoozedUntil).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
+          ${i.snoozedUntil && new Date(i.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5">💤 until ${new Date(i.snoozedUntil+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
           ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
         </div>
         ${(i.subtasks && i.subtasks.length) ? `<div class="subtask-pips"><span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-right:4px">subtasks</span>${i.subtasks.map(s => `<div class="pip ${s.done ? 'done' : 'open'}" title="${s.name}"></div>`).join('')}</div>` : ''}
@@ -2410,7 +2409,7 @@ function renderOutreach() {
         <div class="outreach-name-wrap" style="flex:1;min-width:0;overflow:hidden">
           <span class="outreach-name ${o.done ? 'done' : ''}" id="oname-${o.id}" onclick="editOutreachName(${o.id}, event)" title="Tap to edit" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.name}${o.revenue ? ' <span class=\"rev-badge\" title=\"Revenue contact\">$</span>' : ''}</span>
           ${o.lastPinged ? `<span class="ping-ago" onclick="setPingDate(${o.id}, event)" title="Tap to change date" style="display:block;margin-top:1px">${formatPingAgo(o.lastPinged)}</span>` : ''}
-          ${o.snoozedUntil && new Date(o.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5;display:block;margin-top:1px">💤 until ${new Date(o.snoozedUntil).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
+          ${o.snoozedUntil && new Date(o.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5;display:block;margin-top:1px">💤 until ${new Date(o.snoozedUntil+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
         </div>
         <button class="outreach-del" onclick="deleteOutreach(${o.id}, event)" aria-label="Remove"><i class="ti ti-x"></i></button>
       </div>
@@ -2564,12 +2563,8 @@ function delegatedPanelHTML() {
 }
 
 function renderDelegated() {
-  // Inline anchor (between risk and energizing in the list)
   const anchor = document.getElementById('delegated-anchor');
   if (anchor) anchor.outerHTML = delegatedPanelHTML();
-  // Bottom persistent panel
-  const bottom = document.getElementById('delegated-bottom-bucket');
-  if (bottom) bottom.innerHTML = delegatedPanelHTML().replace('id="delegated-panel-inline"', 'id="delegated-panel-bottom"');
 }
 
 function toggleDelegated() {
@@ -3007,7 +3002,7 @@ function renderSnoozedPanel() {
   if (!total) { el.innerHTML = ''; return; }
 
   const taskRows = snoozedTasks.map(i => {
-    const label = new Date(i.snoozedUntil).toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    const label = new Date(i.snoozedUntil + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'});
     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--radius)">'
       + '<i class="ti ti-checkbox" style="font-size:13px;color:var(--text3);flex-shrink:0"></i>'
       + '<span style="flex:1;font-size:13px">' + i.name + '</span>'
@@ -3017,7 +3012,7 @@ function renderSnoozedPanel() {
   }).join('');
 
   const contactRows = snoozedContacts.map(o => {
-    const label = new Date(o.snoozedUntil).toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    const label = new Date(o.snoozedUntil + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'});
     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--radius)">'
       + '<i class="ti ti-user" style="font-size:13px;color:var(--text3);flex-shrink:0"></i>'
       + '<span style="flex:1;font-size:13px">' + o.name + '</span>'
