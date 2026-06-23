@@ -2458,7 +2458,7 @@ function renderOutreach() {
 
   // Also re-render task list so Today filter picks up outreach stars
   if (activePills.has('starred') || activePills.has('prioritized')) render();
-  renderSnoozedPanel();
+  if (!(activePills.has('starred') && activePills.has('prioritized'))) renderSnoozedPanel();
   renderArchivedOutreachPanel();
 }
 
@@ -3009,6 +3009,7 @@ function toggleSnoozedPanel() {
 function renderSnoozedPanel() {
   const el = document.getElementById('snoozed-bucket');
   if (!el) return;
+  if (activePills.has('starred') && activePills.has('prioritized')) { el.innerHTML = ''; return; }
   const now = new Date();
   const snoozedTasks = items.filter(i => i.snoozedUntil && new Date(i.snoozedUntil) > now && !i.archived)
     .sort((a,b) => new Date(a.snoozedUntil) - new Date(b.snoozedUntil));
@@ -3063,7 +3064,7 @@ async function clearContactSnooze(id) {
   o.snoozedUntil = '';
   o.starred = true;
   renderOutreach();
-  renderSnoozedPanel();
+  if (!(activePills.has('starred') && activePills.has('prioritized'))) renderSnoozedPanel();
   await outreachPost({ action: 'updateOutreach', item: o });
 }
 
