@@ -744,6 +744,7 @@
   <div id="list"></div>
   <div id="archive-bucket"></div>
   <div id="reflection-bucket"></div>
+  <div id="delegated-bottom-bucket"></div>
   <div id="snoozed-bucket"></div>
 
 </div>
@@ -2523,9 +2524,14 @@ function autoCheckDelegations() {
 
 function delegatedPanelHTML() {
   const delegatedItems = items.filter(i => i.delegated && !i.archived && !i.cleared);
-  if (!delegatedItems.length) return '';
   const isCollapsed = delegatedCollapsed;
 
+  if (!delegatedItems.length) {
+    return '<div class="delegated-panel collapsed" id="delegated-panel-inline">'
+      + '<div class="delegated-hdr" onclick="toggleDelegated()">'
+      + '<div class="delegated-hdr-title"><i class="ti ti-user-check" style="font-size:14px"></i> Delegated <span class="delegated-count">0</span></div>'
+      + '<i class="ti ti-chevron-down delegated-chevron"></i></div></div>';
+  }
   const rows = delegatedItems.map(i => {
     const expiry = i.delegationExpiry ? new Date(i.delegationExpiry + 'T12:00:00') : null;
     const daysLeft = expiry ? Math.ceil((expiry - new Date()) / 86400000) : null;
@@ -2558,8 +2564,12 @@ function delegatedPanelHTML() {
 }
 
 function renderDelegated() {
+  // Inline anchor (between risk and energizing in the list)
   const anchor = document.getElementById('delegated-anchor');
   if (anchor) anchor.outerHTML = delegatedPanelHTML();
+  // Bottom persistent panel
+  const bottom = document.getElementById('delegated-bottom-bucket');
+  if (bottom) bottom.innerHTML = delegatedPanelHTML().replace('id="delegated-panel-inline"', 'id="delegated-panel-bottom"');
 }
 
 function toggleDelegated() {
