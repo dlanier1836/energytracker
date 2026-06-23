@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Energy Tracker</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' rx='4' fill='white'/><path fill='none' stroke='%23F97316' stroke-width='1.8' stroke-linecap='round' d='M12 4a8 8 0 1 0 7.4 5'/><path fill='%23F97316' d='M19 3.5l1.5 3.5-3.5-.5z'/><path fill='%23F97316' d='M11 17h-1l1-5.5H8a.75.75 0 0 1-.6-1.2l5.5-7 .6.5L10 13h3a.75.75 0 0 1 .6 1.2l-2.3 3.3L11 17z'/></svg>">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <style>
   :root {
     --bg: #ffffff;
@@ -52,6 +51,31 @@
       --border2: rgba(255,255,255,0.22);
     }
   }
+
+  /* Vendored Tabler Icons 2.47.0 subset: CSS masks keep the existing <i class="ti ti-*"> markup offline-safe. */
+  .ti { display: inline-block; width: 1em; height: 1em; line-height: 1; vertical-align: -0.125em; background-color: currentColor; flex-shrink: 0; -webkit-mask: var(--ti-icon) no-repeat center / contain; mask: var(--ti-icon) no-repeat center / contain; }
+  .ti-archive { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M3%204m0%202a2%202%200%200%201%202%20-2h14a2%202%200%200%201%202%202v0a2%202%200%200%201%20-2%202h-14a2%202%200%200%201%20-2%20-2z%22%2F%3E%3Cpath%20d%3D%22M5%208v10a2%202%200%200%200%202%202h10a2%202%200%200%200%202%20-2v-10%22%2F%3E%3Cpath%20d%3D%22M10%2012l4%200%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-beach { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M17.553%2016.75a7.5%207.5%200%200%200%20-10.606%200%22%2F%3E%3Cpath%20d%3D%22M18%203.804a6%206%200%200%200%20-8.196%202.196l10.392%206a6%206%200%200%200%20-2.196%20-8.196z%22%2F%3E%3Cpath%20d%3D%22M16.732%2010c1.658%20-2.87%202.225%20-5.644%201.268%20-6.196c-.957%20-.552%20-3.075%201.326%20-4.732%204.196%22%2F%3E%3Cpath%20d%3D%22M15%209l-3%205.196%22%2F%3E%3Cpath%20d%3D%22M3%2019.25a2.4%202.4%200%200%201%201%20-.25a2.4%202.4%200%200%201%202%201a2.4%202.4%200%200%200%202%201a2.4%202.4%200%200%200%202%20-1a2.4%202.4%200%200%201%202%20-1a2.4%202.4%200%200%201%202%201a2.4%202.4%200%200%200%202%201a2.4%202.4%200%200%200%202%20-1a2.4%202.4%200%200%201%202%20-1a2.4%202.4%200%200%201%201%20.25%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-bolt { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M13%203l0%207l6%200l-8%2011l0%20-7l-6%200l8%20-11%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-brand-linkedin { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M4%204m0%202a2%202%200%200%201%202%20-2h12a2%202%200%200%201%202%202v12a2%202%200%200%201%20-2%202h-12a2%202%200%200%201%20-2%20-2z%22%2F%3E%3Cpath%20d%3D%22M8%2011l0%205%22%2F%3E%3Cpath%20d%3D%22M8%208l0%20.01%22%2F%3E%3Cpath%20d%3D%22M12%2016l0%20-5%22%2F%3E%3Cpath%20d%3D%22M16%2016v-3a2%202%200%200%200%20-4%200%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-calendar-plus { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M12.5%2021h-6.5a2%202%200%200%201%20-2%20-2v-12a2%202%200%200%201%202%20-2h12a2%202%200%200%201%202%202v5%22%2F%3E%3Cpath%20d%3D%22M16%203v4%22%2F%3E%3Cpath%20d%3D%22M8%203v4%22%2F%3E%3Cpath%20d%3D%22M4%2011h16%22%2F%3E%3Cpath%20d%3D%22M16%2019h6%22%2F%3E%3Cpath%20d%3D%22M19%2016v6%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-calendar-week { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M4%207a2%202%200%200%201%202%20-2h12a2%202%200%200%201%202%202v12a2%202%200%200%201%20-2%202h-12a2%202%200%200%201%20-2%20-2v-12z%22%2F%3E%3Cpath%20d%3D%22M16%203v4%22%2F%3E%3Cpath%20d%3D%22M8%203v4%22%2F%3E%3Cpath%20d%3D%22M4%2011h16%22%2F%3E%3Cpath%20d%3D%22M8%2014v4%22%2F%3E%3Cpath%20d%3D%22M12%2014v4%22%2F%3E%3Cpath%20d%3D%22M16%2014v4%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-car { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M7%2017m-2%200a2%202%200%201%200%204%200a2%202%200%201%200%20-4%200%22%2F%3E%3Cpath%20d%3D%22M17%2017m-2%200a2%202%200%201%200%204%200a2%202%200%201%200%20-4%200%22%2F%3E%3Cpath%20d%3D%22M5%2017h-2v-6l2%20-5h9l4%205h1a2%202%200%200%201%202%202v4h-2m-4%200h-6m-6%20-6h15m-6%200v-5%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-chart-bar { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M3%2012m0%201a1%201%200%200%201%201%20-1h4a1%201%200%200%201%201%201v6a1%201%200%200%201%20-1%201h-4a1%201%200%200%201%20-1%20-1z%22%2F%3E%3Cpath%20d%3D%22M9%208m0%201a1%201%200%200%201%201%20-1h4a1%201%200%200%201%201%201v10a1%201%200%200%201%20-1%201h-4a1%201%200%200%201%20-1%20-1z%22%2F%3E%3Cpath%20d%3D%22M15%204m0%201a1%201%200%200%201%201%20-1h4a1%201%200%200%201%201%201v14a1%201%200%200%201%20-1%201h-4a1%201%200%200%201%20-1%20-1z%22%2F%3E%3Cpath%20d%3D%22M4%2020l14%200%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-check { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M5%2012l5%205l10%20-10%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-checkbox { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M9%2011l3%203l8%20-8%22%2F%3E%3Cpath%20d%3D%22M20%2012v6a2%202%200%200%201%20-2%202h-12a2%202%200%200%201%20-2%20-2v-12a2%202%200%200%201%202%20-2h9%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-chevron-down { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M6%209l6%206l6%20-6%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-mail { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M3%207a2%202%200%200%201%202%20-2h14a2%202%200%200%201%202%202v10a2%202%200%200%201%20-2%202h-14a2%202%200%200%201%20-2%20-2v-10z%22%2F%3E%3Cpath%20d%3D%22M3%207l9%206l9%20-6%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-moon { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M12%203c.132%200%20.263%200%20.393%200a7.5%207.5%200%200%200%207.92%2012.446a9%209%200%201%201%20-8.313%20-12.454z%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-phone { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M5%204h4l2%205l-2.5%201.5a11%2011%200%200%200%205%205l1.5%20-2.5l5%202v4a2%202%200%200%201%20-2%202a16%2016%200%200%201%20-15%20-15a2%202%200%200%201%202%20-2%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-search { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M10%2010m-7%200a7%207%200%201%200%2014%200a7%207%200%201%200%20-14%200%22%2F%3E%3Cpath%20d%3D%22M21%2021l-6%20-6%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-shield-check { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M11.46%2020.846a12%2012%200%200%201%20-7.96%20-14.846a12%2012%200%200%200%208.5%20-3a12%2012%200%200%200%208.5%203a12%2012%200%200%201%20-.09%207.06%22%2F%3E%3Cpath%20d%3D%22M15%2019l2%202l4%20-4%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-shopping-cart { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M6%2019m-2%200a2%202%200%201%200%204%200a2%202%200%201%200%20-4%200%22%2F%3E%3Cpath%20d%3D%22M17%2019m-2%200a2%202%200%201%200%204%200a2%202%200%201%200%20-4%200%22%2F%3E%3Cpath%20d%3D%22M17%2017h-11v-14h-2%22%2F%3E%3Cpath%20d%3D%22M6%205l14%201l-1%207h-13%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-sun { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M12%2012m-4%200a4%204%200%201%200%208%200a4%204%200%201%200%20-8%200%22%2F%3E%3Cpath%20d%3D%22M3%2012h1m8%20-9v1m8%208h1m-9%208v1m-6.4%20-15.4l.7%20.7m12.1%20-.7l-.7%20.7m0%2011.4l.7%20.7m-12.1%20-.7l-.7%20.7%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-trash { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M4%207l16%200%22%2F%3E%3Cpath%20d%3D%22M10%2011l0%206%22%2F%3E%3Cpath%20d%3D%22M14%2011l0%206%22%2F%3E%3Cpath%20d%3D%22M5%207l1%2012a2%202%200%200%200%202%202h8a2%202%200%200%200%202%20-2l1%20-12%22%2F%3E%3Cpath%20d%3D%22M9%207v-3a1%201%200%200%201%201%20-1h4a1%201%200%200%201%201%201v3%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-user { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M8%207a4%204%200%201%200%208%200a4%204%200%200%200%20-8%200%22%2F%3E%3Cpath%20d%3D%22M6%2021v-2a4%204%200%200%201%204%20-4h4a4%204%200%200%201%204%204v2%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-user-check { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M8%207a4%204%200%201%200%208%200a4%204%200%200%200%20-8%200%22%2F%3E%3Cpath%20d%3D%22M6%2021v-2a4%204%200%200%201%204%20-4h4%22%2F%3E%3Cpath%20d%3D%22M15%2019l2%202l4%20-4%22%2F%3E%3C%2Fsvg%3E"); }
+  .ti-x { --ti-icon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20stroke-width%3D%222%22%20stroke%3D%22black%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20stroke%3D%22none%22%20d%3D%22M0%200h24v24H0z%22%20fill%3D%22none%22%2F%3E%3Cpath%20d%3D%22M18%206l-12%2012%22%2F%3E%3Cpath%20d%3D%22M6%206l12%2012%22%2F%3E%3C%2Fsvg%3E"); }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); font-size: 15px; min-height: 100vh; }
@@ -799,7 +823,15 @@ const html = (strs, ...vals) => strs.reduce((out, s, i) =>
 // ── Build stamp ───────────────────────────────────────────
 // Plain editable date string — no build step in a single-file app. AGENTS.md instructs
 // bumping it on every change. Surfaced in bug reports and the ?debug panel.
-const BUILD = '2026-06-23';   // bump on every change; stamped into every bug report
+const BUILD = '2026-06-23-2';   // bump on every change; stamped into every bug report
+
+const VENDORED_TABLER_ICONS = [
+  'ti-archive', 'ti-beach', 'ti-bolt', 'ti-brand-linkedin', 'ti-calendar-plus',
+  'ti-calendar-week', 'ti-car', 'ti-chart-bar', 'ti-check', 'ti-checkbox',
+  'ti-chevron-down', 'ti-mail', 'ti-moon', 'ti-phone', 'ti-search',
+  'ti-shield-check', 'ti-shopping-cart', 'ti-sun', 'ti-trash', 'ti-user',
+  'ti-user-check', 'ti-x',
+];
 
 // ── State ─────────────────────────────────────────────────
 let offClock = localStorage.getItem('offClock') === 'true';
@@ -3433,6 +3465,31 @@ async function runSelfTest() {
       'lastPinged' in ob && 'snoozedUntil' in ob && 'revenue' in ob);
   } catch (e) {
     assert('registry probe ran without uncaught error: ' + (e && e.message), false);
+  }
+
+
+  // ── Offline icon probe: the Tabler subset is vendored, not loaded from a CDN ──
+  try {
+    const vendoredRules = new Set();
+    for (const sheet of Array.from(document.styleSheets)) {
+      let rules;
+      try { rules = sheet.cssRules; } catch (_) { continue; }
+      for (const rule of Array.from(rules || [])) {
+        const selector = rule.selectorText || '';
+        const m = selector.match(/^\.ti-[-\w]+$/);
+        if (m && (rule.style.getPropertyValue('--ti-icon') || '').indexOf('data:image/svg+xml') !== -1) {
+          vendoredRules.add(selector.slice(1));
+        }
+      }
+    }
+    assert('vendored Tabler uses no external stylesheet link',
+      !document.querySelector('link[href*="tabler/icons"], link[href*="tabler-icons"]'));
+    assert('vendored Tabler CSS covers every declared icon',
+      VENDORED_TABLER_ICONS.every(c => vendoredRules.has(c)));
+    assert('vendored Tabler covers dynamic theme/clock icons',
+      ['ti-sun', 'ti-moon', 'ti-calendar-week', 'ti-beach'].every(c => vendoredRules.has(c)));
+  } catch (e) {
+    assert('vendored Tabler probe ran without uncaught error: ' + (e && e.message), false);
   }
 
   const passed = results.filter(r => r.pass).length;

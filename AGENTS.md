@@ -35,13 +35,21 @@ These rules exist so a half-applied change can't garble the page or silently los
 
 ## Adding a field
 
-**Adding a field** is now one edit: add a `[name, coercer]` entry to the entity's
-`ITEM_FIELDS` / `OUTREACH_FIELDS` / `ERRAND_FIELDS` registry. `normalize*()` and the
-new-object defaults derive from it automatically. You still: (a) add the field's UI to
-the bespoke template **if it should display/edit**, and (b) ensure a matching Google
-Sheet column exists for it to **persist** (the Apps Script backend is external to this
-file). Coercers live in `C` — reuse one (`str`, `bool`, `num(d)`, `date`, `pri`, …) or
-add a new pure coercer.
+**Adding a persisted data-shape field** starts with one required registry edit: add a
+`[name, coercer]` entry to the entity's `ITEM_FIELDS` / `OUTREACH_FIELDS` /
+`ERRAND_FIELDS` registry. `normalize*()` and the new-object defaults derive from it
+automatically. You still: (a) add the field's UI to the bespoke template **if it should
+display/edit**, and (b) ensure a matching Google Sheet column exists for it to
+**persist** (the Apps Script backend is external to this file). Coercers live in `C` —
+reuse one (`str`, `bool`, `num(d)`, `date`, `pri`, …) or add a new pure coercer.
+
+## Adding an icon
+
+Tabler icons are vendored inline as a pinned **Tabler Icons 2.47.0** CSS-mask subset.
+Do not add a CDN stylesheet. If you add `<i class="ti ti-foo">`, also add the matching
+`.ti-foo { --ti-icon: url("data:image/svg+xml,...") }` rule near the top of
+`energy_tracker.html`, add it to `VENDORED_TABLER_ICONS`, and keep the `?selftest`
+vendored-icon probe green. Existing `ti ti-*` markup is intentional.
 
 ## Hard constraints
 
