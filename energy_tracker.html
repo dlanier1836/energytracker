@@ -1502,14 +1502,14 @@ function sortItems(arr) {
 // Today view: group by priority tier with section headers
 function renderTodayView(vis) {
   const PRI_LABELS = { '0':'!! Top priority', '1':'! High priority', '2':'Normal', '3':'↓ Low priority' };
+  const focusMode = activePills.has('prioritized'); // Today + Prioritized = zero chaff
   let html = '';
   const activeVis  = vis.filter(i => !i.cleared);
   const clearedVis = vis.filter(i =>  i.cleared);
   ['0','1','2','3'].forEach(p => {
     const group = activeVis.filter(i => (i.pri||'2') === p);
     if (!group.length) {
-      // Inject delegated anchor after !! Top even if empty
-      if (p === '0') html += '<div id="delegated-anchor"></div>';
+      if (p === '0' && !focusMode) html += '<div id="delegated-anchor"></div>';
       return;
     }
     const sorted = group.slice().sort((a,b) => {
@@ -1520,10 +1520,9 @@ function renderTodayView(vis) {
     });
     html += `<div class="section-hdr" style="color:var(--text2)">${PRI_LABELS[p]}</div>`;
     sorted.forEach(i => { html += itemHTML(i); });
-    // Inject delegated panel after !! Top priority group
-    if (p === '0') html += '<div id="delegated-anchor"></div>';
+    if (p === '0' && !focusMode) html += '<div id="delegated-anchor"></div>';
   });
-  if (clearedVis && clearedVis.length) {
+  if (!focusMode && clearedVis && clearedVis.length) {
     html += '<div class="section-hdr" style="color:var(--text3)">✓ Cleared</div>';
     clearedVis.forEach(i => { html += itemHTML(i); });
   }
@@ -1605,9 +1604,18 @@ function render() {
   // Inject delegated panel after DOM is written
   renderDelegated();
   renderRemission();
-  renderArchiveBucket();
-  renderReflection();
-  renderSnoozedPanel();
+  const focusMode = activePills.has('starred') && activePills.has('prioritized');
+  if (!focusMode) {
+    renderArchiveBucket();
+    renderReflection();
+    renderSnoozedPanel();
+  } else {
+    // Hide all bottom panels in focus mode
+    ['archive-bucket','reflection-bucket','snoozed-bucket'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '';
+    });
+  }
 }
 
 function deadlineHTML(item) {
