@@ -799,7 +799,7 @@ const html = (strs, ...vals) => strs.reduce((out, s, i) =>
 // ── Build stamp ───────────────────────────────────────────
 // Plain editable date string — no build step in a single-file app. AGENTS.md instructs
 // bumping it on every change. Surfaced in bug reports and the ?debug panel.
-const BUILD = '2026-06-22';   // bump on every change; stamped into every bug report
+const BUILD = '2026-06-22-2';   // bump on every change; stamped into every bug report
 
 // ── State ─────────────────────────────────────────────────
 let offClock = localStorage.getItem('offClock') === 'true';
@@ -939,36 +939,50 @@ function saveScriptUrl() {
 }
 
 // ── Data helpers ──────────────────────────────────────────
-function normalize(r) {
-  const cat = String(r.cat || '3').trim();
-  const added = (r.added || '');
-  const addedClean = /\d{4}-\d{2}-\d{2}/.test(added) ? added.slice(0,10) : '';
-  return {
-    id:       Number(r.id),
-    name:     r.name  || '',
-    cat:      ['1','2','3','4'].includes(cat) ? cat : '3',
-    tag:      r.tag   || 'work',
-    note:     r.note  || '',
-    cleared:  r.cleared === true || String(r.cleared).toUpperCase() === 'TRUE',
-    added:    addedClean,
-    pri:      String(r.pri != null && r.pri !== '' ? r.pri : '2'),
-    deadline: /\d{4}-\d{2}-\d{2}/.test(r.deadline || '') ? r.deadline.slice(0,10) : '',
-    starred:  r.starred  === true || String(r.starred).toUpperCase()  === 'TRUE',
-    archived:   r.archived  === true || String(r.archived).toUpperCase()  === 'TRUE',
-    archivedAt: r.archivedAt || '',
-    subtasks: (() => { try { const v = r.subtasks; if (!v || v === '' || v === '0' || v === 0) return []; if (Array.isArray(v)) return v; const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch(e) { return []; } })(),
-    estimate: r.estimate ? Number(r.estimate) : 0,
-    remission:    r.remission    === true || String(r.remission).toUpperCase()    === 'TRUE',
-    snoozedUntil: /\d{4}-\d{2}-\d{2}/.test(r.snoozedUntil || '') ? r.snoozedUntil.slice(0,10) : '',
-    revenue:      r.revenue      === true || String(r.revenue).toUpperCase()      === 'TRUE',
-    delegated:    r.delegated    === true || String(r.delegated).toUpperCase()    === 'TRUE',
-    delegatedTo:  r.delegatedTo  || '',
-    delegationExpiry: /\d{4}-\d{2}-\d{2}/.test(r.delegationExpiry || '') ? String(r.delegationExpiry).slice(0,10) : '',
-    recurring:     r.recurring     || '',
-    lastCompleted: r.lastCompleted ? String(r.lastCompleted).slice(0,10) : '',
-    nextRecurAt:   r.nextRecurAt   || '',
-  };
-}
+
+// ── Field schema registry ─────────────────────────────────
+// One ordered list per entity = the SINGLE source for both load-normalization and
+// new-object defaults. Add a field here (name + coercer) and normalize*() + the add
+// path pick it up automatically. Coercers reproduce the exact legacy coercion.
+const C = {
+  id:    v => Number(v),
+  str:   v => v || '',
+  strD:  d => v => v || d,
+  bool:  v => v === true || String(v).toUpperCase() === 'TRUE',
+  num:   d => v => v ? Number(v) : d,
+  date:  v => /\d{4}-\d{2}-\d{2}/.test(v || '') ? String(v).slice(0,10) : '',  // strict (item)
+  date10: v => (v || '').slice(0,10),                                          // loose (outreach/errand `added`)
+  slice10: v => v ? String(v).slice(0,10) : '',                               // item lastCompleted
+  pri:   v => String(v != null && v !== '' ? v : '2'),
+  catItem: v => { const c = String(v || '3').trim(); return ['1','2','3','4'].includes(c) ? c : '3'; },
+  subtasks: v => { try { if (!v || v === '' || v === '0' || v === 0) return []; if (Array.isArray(v)) return v; const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch(e) { return []; } },
+};
+
+const ITEM_FIELDS = [
+  ['id', C.id], ['name', C.str], ['cat', C.catItem], ['tag', C.strD('work')],
+  ['note', C.str], ['cleared', C.bool], ['added', C.date], ['pri', C.pri],
+  ['deadline', C.date], ['starred', C.bool], ['archived', C.bool], ['archivedAt', C.str],
+  ['subtasks', C.subtasks], ['estimate', C.num(30)],  /* drift fix: was 0 on load, 30 on add → 30 */
+  ['remission', C.bool], ['snoozedUntil', C.date], ['revenue', C.bool],
+  ['delegated', C.bool], ['delegatedTo', C.str], ['delegationExpiry', C.date],
+  ['recurring', C.str], ['lastCompleted', C.slice10], ['nextRecurAt', C.str],
+];
+const OUTREACH_FIELDS = [
+  ['id', C.id], ['name', C.str], ['type', C.strD('call')], ['cat', C.strD('3')],
+  ['pri', C.pri], ['starred', C.bool], ['done', C.bool], ['archived', C.bool],
+  ['archivedAt', C.str], ['added', C.date10], ['lastPinged', C.str],
+  ['snoozedUntil', C.date], ['revenue', C.bool],
+];
+const ERRAND_FIELDS = [
+  ['id', C.id], ['name', C.str], ['pri', C.pri], ['starred', C.bool], ['done', C.bool],
+  ['archived', C.bool], ['archivedAt', C.str], ['added', C.date10],
+  ['type', C.strD('errand')], ['note', C.str],
+];
+
+function fromSchema(fields, r)  { const o = {}; for (const [k, c] of fields) o[k] = c(r ? r[k] : undefined); return o; }
+function blankFromSchema(fields){ return fromSchema(fields, {}); }   // every field at its default
+
+function normalize(r) { return fromSchema(ITEM_FIELDS, r); }
 
 function setSyncStatus(msg, cls) {
   const el = document.getElementById('sync-status');
@@ -1187,30 +1201,14 @@ async function addItem() {
   const name = document.getElementById('f-name').value.trim();
   if (!name) return;
   const id = Date.now();
-  const item = {
+  const item = { ...blankFromSchema(ITEM_FIELDS),
     id, name,
-    cat:      document.getElementById('f-cat').value,
-    tag:      document.getElementById('f-tag').value,
-    note:     '',
-    cleared:  false,
-    added:    new Date().toISOString().slice(0,10),
-    pri:      document.getElementById('f-pri').value,
-    deadline: '',
-    starred:   addStarred,
-    archived:   false,
-    archivedAt: '',
-    subtasks:  [],
-    estimate:     30,
-    remission:    false,
-    snoozedUntil:     '',
-    revenue:          addRevenue,
-    delegated:        false,
-    delegatedTo:      '',
-    delegationExpiry: '',
-    recurring:        '',
-    lastCompleted:    '',
-    nextRecurAt:      '',
-  };
+    cat:    document.getElementById('f-cat').value,
+    tag:    document.getElementById('f-tag').value,
+    pri:    document.getElementById('f-pri').value,
+    added:  new Date().toISOString().slice(0,10),
+    starred: addStarred, revenue: addRevenue,
+  };   // estimate:30, subtasks:[], all flags false, etc. come from the blank
   document.getElementById('f-name').value = '';
   addStarred = false;
   addRevenue = false;
@@ -2086,23 +2084,7 @@ const O_CAT_DOT   = { '1':'e1','2':'e2','3':'e3','4':'e4' };
 const O_CAT_ACC   = { '1':'acc-risk','2':'acc-enrg','3':'acc-neut','4':'acc-drai' };
 const O_PRI_BADGE = { '0':{ badge:'!!', cls:'pri-top' }, '1':{ badge:'!', cls:'pri-high' }, '2':{ badge:'', cls:'' }, '3':{ badge:'↓', cls:'pri-low' } };
 
-function normalizeOutreach(r) {
-  return {
-    id:       Number(r.id),
-    name:     r.name || '',
-    type:     r.type || 'call',
-    cat:      String(r.cat || '3'),
-    pri:      String(r.pri != null && r.pri !== '' ? r.pri : '2'),
-    starred:  r.starred === true || String(r.starred).toUpperCase() === 'TRUE',
-    done:     r.done === true || String(r.done).toUpperCase() === 'TRUE',
-    archived:   r.archived  === true || String(r.archived).toUpperCase()  === 'TRUE',
-    archivedAt: r.archivedAt || '',
-    added:    (r.added || '').slice(0,10),
-    lastPinged:   r.lastPinged   || '',
-    snoozedUntil: /\d{4}-\d{2}-\d{2}/.test(r.snoozedUntil || '') ? r.snoozedUntil.slice(0,10) : '',
-    revenue:      r.revenue === true || String(r.revenue).toUpperCase() === 'TRUE',
-  };
-}
+function normalizeOutreach(r) { return fromSchema(OUTREACH_FIELDS, r); }
 
 async function loadOutreach() {
   if (!scriptUrl) return;
@@ -2167,8 +2149,11 @@ async function addOutreach() {
   const addBtn = document.querySelector('.outreach-add button');
   if (addBtn) { addBtn.disabled = true; addBtn.textContent = 'Adding…'; }
   for (const name of names) {
-    const item = { id: Date.now() + Math.random(), name, type, cat:'3', pri:'2', starred:outreachAddStarred, done:false, archived:false, added: new Date().toISOString().slice(0,10) };
-    item.id = Math.floor(item.id);
+    // now ships lastPinged/snoozedUntil/revenue (drift fix) via the registry blank
+    const item = { ...blankFromSchema(OUTREACH_FIELDS),
+      id: Math.floor(Date.now() + Math.random()), name, type,
+      starred: outreachAddStarred, added: new Date().toISOString().slice(0,10),
+    };
     await commitAdd('outreach', item, { render: false });   // render once after the loop
   }
   document.getElementById('o-name').value = '';
@@ -2752,20 +2737,7 @@ async function cycleErrandType(id, e) {
 }
 let errandsCollapsed = false;
 
-function normalizeErrand(r) {
-  return {
-    id:       Number(r.id),
-    name:     r.name || '',
-    pri:      String(r.pri != null && r.pri !== '' ? r.pri : '2'),
-    starred:  r.starred === true || String(r.starred).toUpperCase() === 'TRUE',
-    done:     r.done    === true || String(r.done).toUpperCase()    === 'TRUE',
-    archived:   r.archived  === true || String(r.archived).toUpperCase()  === 'TRUE',
-    archivedAt: r.archivedAt || '',
-    added:    (r.added || '').slice(0,10),
-    type:     r.type || 'errand',
-    note:     r.note || '',
-  };
-}
+function normalizeErrand(r) { return fromSchema(ERRAND_FIELDS, r); }
 
 async function loadErrands() {
   if (!scriptUrl) return;
@@ -2807,7 +2779,10 @@ async function addErrands() {
   const names = raw.split(/[,\u000a]+/).map(s => s.trim()).filter(Boolean);
   for (const name of names) {
     const etype = document.getElementById('e-type') ? document.getElementById('e-type').value : 'errand';
-    const item = { id: Math.floor(Date.now() + Math.random()*1000), name, pri:'2', starred:false, done:false, archived:false, added: new Date().toISOString().slice(0,10), type: etype, note: '' };
+    const item = { ...blankFromSchema(ERRAND_FIELDS),
+      id: Math.floor(Date.now() + Math.random()*1000), name, type: etype,
+      added: new Date().toISOString().slice(0,10),
+    };
     await commitAdd('errand', item, { render: false });   // render once after the loop
   }
   document.getElementById('e-name').value = '';
@@ -3397,6 +3372,52 @@ async function runSelfTest() {
       if (cacheSnap3[k] === null) localStorage.removeItem(k);
       else localStorage.setItem(k, cacheSnap3[k]);
     }
+  }
+
+  // ── Sync probe: prove the field-schema registry is the single source of truth ──
+  // The registry functions (normalize*/fromSchema/blankFromSchema) are PURE — no fetch,
+  // render, or localStorage — so this needs no snapshot/stub/restore. It must not (and
+  // does not) mutate any global. Guards the field-list ↔ output drift this chunk killed.
+  try {
+    const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+    // Completeness: normalize output keys (and order) exactly match the registry field list.
+    assert('ITEM registry ↔ normalize keys match',
+      eq(Object.keys(normalize({})), ITEM_FIELDS.map(f => f[0])));
+    assert('OUTREACH registry ↔ normalizeOutreach keys match',
+      eq(Object.keys(normalizeOutreach({})), OUTREACH_FIELDS.map(f => f[0])));
+    assert('ERRAND registry ↔ normalizeErrand keys match',
+      eq(Object.keys(normalizeErrand({})), ERRAND_FIELDS.map(f => f[0])));
+
+    // Blank completeness: a new item can't silently omit a field. Every registry key is
+    // present and defined — the sole NaN is id (no row id yet on a blank).
+    const ib = blankFromSchema(ITEM_FIELDS);
+    assert('item blank has every registry key',
+      eq(Object.keys(ib), ITEM_FIELDS.map(f => f[0])));
+    assert('item blank has no undefined (id is NaN, not undefined)',
+      Number.isNaN(ib.id) && Object.entries(ib).every(([k, v]) => k === 'id' || v !== undefined));
+
+    // Round-trip fidelity: representative coercions, covering the drift fields.
+    assert('normalize coerces estimate string → number', normalize({ estimate: '45' }).estimate === 45);
+    assert('normalize clamps out-of-range cat → 3', normalize({ cat: '9' }).cat === '3');
+    assert('normalize coerces TRUE string → bool', normalize({ starred: 'TRUE' }).starred === true);
+    assert('normalizeOutreach coerces revenue TRUE → bool', normalizeOutreach({ revenue: 'TRUE' }).revenue === true);
+    assert('normalizeErrand defaults type → errand', normalizeErrand({}).type === 'errand');
+
+    // Idempotency: coercers are stable, so a second pass changes nothing.
+    const si = normalize({ id: 7, name: 'x', cat: '2', estimate: '45', starred: 'TRUE', subtasks: '[]' });
+    assert('normalize is idempotent', eq(normalize(si), si));
+    const so = normalizeOutreach({ id: 8, name: 'y', revenue: 'TRUE', added: '2026-06-22T09:00' });
+    assert('normalizeOutreach is idempotent', eq(normalizeOutreach(so), so));
+
+    // Drift-fix proof: item estimate now defaults to 30 (was 0 on load); a fresh outreach
+    // object now ships the previously-omitted lastPinged/snoozedUntil/revenue fields.
+    assert('drift fix: item blank estimate defaults to 30', ib.estimate === 30);
+    const ob = blankFromSchema(OUTREACH_FIELDS);
+    assert('drift fix: outreach blank ships lastPinged/snoozedUntil/revenue',
+      'lastPinged' in ob && 'snoozedUntil' in ob && 'revenue' in ob);
+  } catch (e) {
+    assert('registry probe ran without uncaught error: ' + (e && e.message), false);
   }
 
   const passed = results.filter(r => r.pass).length;

@@ -33,17 +33,15 @@ These rules exist so a half-applied change can't garble the page or silently los
    snapshot + the most recent error as a paste-ready prompt. **Reproduce via `?selftest`
    before guessing** — trace the recent actions in the log, don't speculate.
 
-## Adding a field (honest current cost)
+## Adding a field
 
-There is **no field-schema registry yet** (it's a planned next chunk). Today, adding a field
-means editing **four** places for the relevant entity:
-- its `normalize()` (e.g. `normalize` / `normalizeOutreach` / `normalizeErrand`),
-- the `add` path,
-- the `commit` patch where it's mutated,
-- the template that renders it.
-
-Do all four or the field will be dropped on load, on save, or on render. A registry to
-collapse this to one edit is coming — do not pretend it exists.
+**Adding a field** is now one edit: add a `[name, coercer]` entry to the entity's
+`ITEM_FIELDS` / `OUTREACH_FIELDS` / `ERRAND_FIELDS` registry. `normalize*()` and the
+new-object defaults derive from it automatically. You still: (a) add the field's UI to
+the bespoke template **if it should display/edit**, and (b) ensure a matching Google
+Sheet column exists for it to **persist** (the Apps Script backend is external to this
+file). Coercers live in `C` — reuse one (`str`, `bool`, `num(d)`, `date`, `pri`, …) or
+add a new pure coercer.
 
 ## Hard constraints
 
