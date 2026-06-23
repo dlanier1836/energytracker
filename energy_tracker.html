@@ -2358,7 +2358,10 @@ function renderOutreach() {
   // In Today view, only show starred outreach in the panel
   const todayActive = activePills.has('starred');
   const nowTs = new Date();
+  const focusMode = activePills.has('starred') && activePills.has('prioritized');
   const vis = outreachItems.filter(o => {
+    // Focus mode: only starred + top priority contacts
+    if (focusMode && (!o.starred || o.pri !== '0')) return false;
     if (todayActive && !o.done && !o.starred) return false;
     if (outreachTypeFilter !== 'all' && o.type !== outreachTypeFilter) return false;
     // Hide snoozed contacts (unless searching)
