@@ -1062,7 +1062,9 @@ async function toggle(id, e) {
         const resetDate = new Date();
         resetDate.setDate(resetDate.getDate() + delay);
         resetDate.setHours(5, 0, 0, 0);
-        item.snoozedUntil = resetDate.toISOString().slice(0,10);
+        // Use local date to avoid UTC timezone shift
+        const pad = n => String(n).padStart(2,'0');
+        item.snoozedUntil = resetDate.getFullYear() + '-' + pad(resetDate.getMonth()+1) + '-' + pad(resetDate.getDate());
       }
     }
     // Don't stay in cleared — move directly to snoozed
