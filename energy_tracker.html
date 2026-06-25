@@ -2271,7 +2271,8 @@ function renderArchivedOutreachPanel() {
 }
 
 function autoStarUnsnoozedOutreach() {
-  const localToday = new Date().toLocaleDateString('en-CA');
+  const _d = new Date(); const _pad = n => String(n).padStart(2,'0');
+  const localToday = _d.getFullYear() + '-' + _pad(_d.getMonth()+1) + '-' + _pad(_d.getDate());
   outreachItems.forEach(o => {
     if (o.snoozedUntil && o.snoozedUntil <= localToday) {
       o.snoozedUntil = '';
@@ -2528,7 +2529,8 @@ function autoCheckDelegations() {
   let changed = false;
   items.forEach(i => {
     if (!i.delegated) return;
-    const localToday = new Date().toLocaleDateString('en-CA');
+    const _d = new Date(); const _pad = n => String(n).padStart(2,'0');
+  const localToday = _d.getFullYear() + '-' + _pad(_d.getMonth()+1) + '-' + _pad(_d.getDate());
     const shouldRecall = i.delegationExpiry && i.delegationExpiry <= localToday;
     if (shouldRecall) {
       i.delegated = false;
@@ -2542,6 +2544,7 @@ function autoCheckDelegations() {
 }
 
 function delegatedPanelHTML() {
+  if (offClock) return '';
   const delegatedItems = items.filter(i => i.delegated && !i.archived && !i.cleared);
   const isCollapsed = delegatedCollapsed;
 
@@ -2558,7 +2561,7 @@ function delegatedPanelHTML() {
     if (expiry) {
       if (daysLeft < 0)        expiryText = ' · overdue';
       else if (daysLeft === 0) expiryText = ' · check back today';
-      else                     expiryText = ' · ↩ ' + expiry.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      else                     expiryText = ' · ↩ ' + new Date(i.delegationExpiry + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
     }
     const delegationLine = (i.delegatedTo ? '→ ' + i.delegatedTo : '') + expiryText;
     // Modify the item to show delegation info in its meta
@@ -2955,7 +2958,8 @@ function moveSubtask(itemId, subId, dir) {
 // ── Auto-star on unsnooze ─────────────────────────────────
 function autoStarUnsnoozed() {
   // Use local date string (YYYY-MM-DD) to avoid UTC timezone mismatch
-  const localToday = new Date().toLocaleDateString('en-CA'); // en-CA gives YYYY-MM-DD
+  const _d = new Date(); const _pad = n => String(n).padStart(2,'0');
+  const localToday = _d.getFullYear() + '-' + _pad(_d.getMonth()+1) + '-' + _pad(_d.getDate()); // en-CA gives YYYY-MM-DD
   let changed = false;
   items.forEach(i => {
     if (i.snoozedUntil && i.snoozedUntil <= localToday) {
@@ -2966,6 +2970,7 @@ function autoStarUnsnoozed() {
       apiPost({ action: 'update', item: i });
     }
   });
+  if (changed) renderSnoozedPanel();
   return changed;
 }
 
@@ -3016,7 +3021,8 @@ function renderSnoozedPanel() {
   if (!el) return;
   if (activePills.has('starred') && activePills.has('prioritized')) { el.innerHTML = ''; return; }
   const now = new Date();
-  const localToday = new Date().toLocaleDateString('en-CA');
+  const _d = new Date(); const _pad = n => String(n).padStart(2,'0');
+  const localToday = _d.getFullYear() + '-' + _pad(_d.getMonth()+1) + '-' + _pad(_d.getDate());
   const snoozedTasks = items.filter(i => i.snoozedUntil && i.snoozedUntil > localToday && !i.archived)
     .sort((a,b) => new Date(a.snoozedUntil) - new Date(b.snoozedUntil));
   const snoozedContacts = outreachItems.filter(o => o.snoozedUntil && o.snoozedUntil > localToday && !o.archived)
