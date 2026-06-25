@@ -524,7 +524,7 @@
     .stats { grid-template-columns: repeat(2, 1fr); }
     .pomo-bar { gap: 8px; }
     .pomo-btns { margin-left: 0; width: 100%; }
-    #pomo-bar-container .pomo-controls { display: none; } /* collapsed by default on mobile */
+    /* pomo collapsed by default globally via pomoCollapsed state */
     .add-row { flex-direction: column; align-items: stretch; }
     .edit-row { grid-template-columns: 1fr; }
     .outreach-add { flex-wrap: wrap; }
@@ -578,12 +578,12 @@
   </div>
 
   <!-- Pomodoro -->
-  <div class="pomo-bar" id="pomo-bar-container">
+  <div class="pomo-bar collapsed" id="pomo-bar-container">
     <div style="display:flex;align-items:center;gap:8px;width:100%">
       <div class="pomo-display" id="pomo-display">15:00</div>
       <div class="pomo-status" id="pomo-status" style="flex:1">Ready</div>
       <span id="pomo-focus-summary" style="font-size:12px;color:var(--text3)"></span>
-      <button class="pomo-collapse-btn" onclick="togglePomoCollapse()" id="pomo-collapse-btn">▾ Focus</button>
+      <button class="pomo-collapse-btn" onclick="togglePomoCollapse()" id="pomo-collapse-btn">▸ Focus</button>
     </div>
     <div class="pomo-controls">
     <div class="pomo-presets">
@@ -1490,11 +1490,10 @@ function sortItems(arr) {
     if (ca !== cb) return ca - cb;
     const ta = TAG_SORT_ORDER[a.tag] ?? 1, tb = TAG_SORT_ORDER[b.tag] ?? 1;
     if (ta !== tb) return ta - tb;
-    // Deadline nudge — items due within 3 days float up within same priority/cat/tag
-    const da = a.deadline ? Math.round((new Date(a.deadline) - new Date()) / 86400000) : 999;
-    const db = b.deadline ? Math.round((new Date(b.deadline) - new Date()) / 86400000) : 999;
-    const urgA = da <= 3 ? 0 : 1, urgB = db <= 3 ? 0 : 1;
-    if (urgA !== urgB) return urgA - urgB;
+    // Items with deadlines float to top, sorted soonest first
+    const hasDA = a.deadline ? 0 : 1, hasDB = b.deadline ? 0 : 1;
+    if (hasDA !== hasDB) return hasDA - hasDB;
+    if (a.deadline && b.deadline) return a.deadline.localeCompare(b.deadline);
     return b.id - a.id;
   });
 }
@@ -1792,7 +1791,7 @@ function itemHTML(i) {
 
 // ── Pomodoro ──────────────────────────────────────────────
 let pomoSecs = 15*60, pomoRunning = false, pomoInterval = null, pomoDuration = 15;
-let pomoCollapsed = false;
+let pomoCollapsed = true;
 
 // ── Focus tracking ───────────────────────────────────────
 // Sessions stored as array of {mins, duration} per day
@@ -1826,6 +1825,8 @@ function togglePomoCollapse() {
   if (bar) bar.classList.toggle('collapsed', pomoCollapsed);
   const btn = document.getElementById('pomo-collapse-btn');
   if (btn) btn.textContent = pomoCollapsed ? '▸ Focus' : '▾ Focus';
+  // Update summary visibility
+  updateFocusDisplay();
 }
 
 function resetFocusDay() {
@@ -1844,7 +1845,7 @@ function updateFocusDisplay() {
   document.getElementById('focus-total-display').textContent = focusLabel;
   // Also update collapsed summary
   const summary = document.getElementById('pomo-focus-summary');
-  if (summary) summary.textContent = totalMins > 0 ? focusLabel : '';
+  if (summary) summary.textContent = pomoCollapsed ? focusLabel : '';
 
   // 10 boxes × 30 min = 5 hrs max — each box fills incrementally
   const BOXES = 10;
