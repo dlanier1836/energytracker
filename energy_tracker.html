@@ -365,6 +365,8 @@
   .delegated-body { padding: 6px 8px 8px; }
   .delegated-recall { background: none; border: 0.5px solid #2A44A0; color: #2A44A0; font-size: 11px; padding: 2px 8px; border-radius: 20px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
   .recur-badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: var(--bg2); color: var(--text3); border: 0.5px solid var(--border); flex-shrink: 0; }
+  .weekend-badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #E8EFFE; color: #185FA5; border: 0.5px solid #2A44A0; flex-shrink: 0; }
+  html.dark .weekend-badge { background: #121a2a; color: #93c5fd; border-color: #93c5fd; }
   html.dark .delegated-recall { border-color: #93c5fd; color: #93c5fd; }
   .delegated-recall:hover { background: #E8EFFE; }
   html.dark .delegated-recall:hover { background: #121a2a; }
@@ -934,6 +936,7 @@ function normalize(r) {
     recurring:     r.recurring     || '',
     lastCompleted: r.lastCompleted ? String(r.lastCompleted).slice(0,10) : '',
     nextRecurAt:   r.nextRecurAt   || '',
+    weekend:       r.weekend === true || String(r.weekend).toUpperCase() === 'TRUE',
   };
 }
 
@@ -1029,6 +1032,7 @@ async function addItem() {
     recurring:        '',
     lastCompleted:    '',
     nextRecurAt:      '',
+    weekend:          false,
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
@@ -1449,7 +1453,7 @@ function visible() {
       const snoozeDate = new Date(i.snoozedUntil);
       if (snoozeDate > now) return false;
     }
-    if (offClock && i.tag === 'work') return false;
+    if (offClock && i.tag === 'work' && !i.weekend) return false;
     if (searchQuery && !i.name.toLowerCase().includes(searchQuery)) return false;
     if (activePills.has('revenue') && !i.revenue) return false;
     if (catFilter) return i.cat === catFilter;
@@ -1537,7 +1541,7 @@ function render() {
     if (i.cleared) return false;
     if (i.remission) return false;
     if (i.delegated) return false;
-    if (offClock && i.tag === 'work') return false;
+    if (offClock && i.tag === 'work' && !i.weekend) return false;
     if (todayStar && !i.starred) return false;
     return true;
   }).forEach(i => { if (counts[i.cat] !== undefined) counts[i.cat]++; });
@@ -1704,6 +1708,14 @@ function itemHTML(i) {
         </select>
       </div>
     </div>
+    <div class="edit-label" style="margin-top:8px">Weekend prep <span style="font-weight:400;text-transform:none;font-size:11px">(shows in off-clock queue on Sunday noon)</span></div>
+    <div style="margin-bottom:8px">
+      <button id="edit-weekend-${i.id}" onclick="toggleWeekendFlag(${i.id})"
+        class="${i.weekend ? 'weekend-badge' : 'snooze-btn'}"
+        style="font-size:12px;cursor:pointer;border:none;padding:4px 10px;border-radius:4px">
+        ${i.weekend ? '🏖 Weekend prep — tap to remove' : '🏖 Mark for weekend prep'}
+      </button>
+    </div>
     <div class="edit-label" style="margin-top:8px">Recurring <span style="font-weight:400;text-transform:none;font-size:11px">(auto-resets when cleared)</span></div>
     <select class="edit-field" id="edit-recurring-${i.id}" style="margin-bottom:8px" onchange="updateNextRecurAt(${i.id})">
       <option value=""   ${!i.recurring              ?'selected':''}>Not recurring</option>
@@ -1762,6 +1774,7 @@ function itemHTML(i) {
         <div class="item-meta">
           <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}" style="text-transform:none;letter-spacing:0">${i.tag === 'work' ? 'Work' : 'Personal'}</span>
           ${i.recurring ? `<span class="recur-badge">🔁 ${i.recurring}</span>` : ''}
+          ${i.weekend ? '<span class="weekend-badge">🏖 weekend</span>' : ''}
           ${deadlineHTML(i)}
           ${i.note ? `<span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">${linkifyNote(i.note)}</span>` : ''}
           ${i.snoozedUntil && new Date(i.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5">💤 until ${new Date(i.snoozedUntil+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
@@ -2896,6 +2909,32 @@ function deleteSubtask(itemId, subId) {
   item.subtasks = item.subtasks.filter(s => s.id !== subId);
   expandedId = itemId;
   render();
+  apiPost({ action: 'update', item });
+}
+
+function toggleWeekendFlag(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item.weekend = !item.weekend;
+  if (item.weekend) {
+    // Snooze until next Sunday at noon local time
+    const d = new Date();
+    const day = d.getDay(); // 0=Sun
+    const daysUntil = day === 0 ? 7 : 7 - day;
+    d.setDate(d.getDate() + daysUntil);
+    d.setHours(12, 0, 0, 0);
+    const pad = n => String(n).padStart(2,'0');
+    item.snoozedUntil = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+  } else {
+    item.snoozedUntil = '';
+  }
+  // Update button in place
+  const btn = document.getElementById('edit-weekend-' + id);
+  if (btn) {
+    btn.className = item.weekend ? 'weekend-badge' : 'snooze-btn';
+    btn.style.cssText = 'font-size:12px;cursor:pointer;border:none;padding:4px 10px;border-radius:4px';
+    btn.textContent = item.weekend ? '🏖 Weekend prep — tap to remove' : '🏖 Mark for weekend prep';
+  }
   apiPost({ action: 'update', item });
 }
 
