@@ -1098,9 +1098,10 @@ function toggleRevenueEdit(id) {
   // Update button in place
   const btn = document.getElementById('edit-revenue-' + id);
   if (btn) {
-    btn.className = item.revenue ? 'remission-restore-btn' : 'snooze-btn';
-    btn.textContent = item.revenue ? '$ Revenue item — tap to unmark' : '$ Mark as revenue impact';
-    btn.style.fontSize = '12px';
+    btn.style.border = '1px solid ' + (item.revenue ? '#3A9E6C' : 'var(--border2)');
+    btn.style.background = item.revenue ? '#E0F5EC' : 'none';
+    btn.style.color = item.revenue ? '#1E6B46' : 'var(--text3)';
+    btn.textContent = '$ ' + (item.revenue ? 'Revenue ✓' : 'Revenue');
   }
   // Re-render the row badge without closing edit panel
   apiPost({ action: 'update', item });
@@ -1708,14 +1709,7 @@ function itemHTML(i) {
         </select>
       </div>
     </div>
-    <div class="edit-label" style="margin-top:8px">Weekend prep <span style="font-weight:400;text-transform:none;font-size:11px">(shows in off-clock queue on Sunday noon)</span></div>
-    <div style="margin-bottom:8px">
-      <button id="edit-weekend-${i.id}" onclick="toggleWeekendFlag(${i.id})"
-        class="${i.weekend ? 'weekend-badge' : 'snooze-btn'}"
-        style="font-size:12px;cursor:pointer;border:none;padding:4px 10px;border-radius:4px">
-        ${i.weekend ? '🏖 Weekend prep — tap to remove' : '🏖 Mark for weekend prep'}
-      </button>
-    </div>
+
     <div class="edit-label" style="margin-top:8px">Recurring <span style="font-weight:400;text-transform:none;font-size:11px">(auto-resets when cleared)</span></div>
     <select class="edit-field" id="edit-recurring-${i.id}" style="margin-bottom:8px" onchange="updateNextRecurAt(${i.id})">
       <option value=""   ${!i.recurring              ?'selected':''}>Not recurring</option>
@@ -1732,25 +1726,26 @@ function itemHTML(i) {
       <input class="edit-field" type="date" id="edit-delegationexpiry-${i.id}" value="${i.delegationExpiry || ''}" style="margin-bottom:0;width:140px" title="Check-back date" />
     </div>
     <div class="edit-label" style="margin-top:8px">Priority</div>
-    <div class="pri-selector" id="edit-pri-${i.id}">
-      ${['0','1','2','3'].map(v => {
-        const sel = v === pri ? 'selected ' + PRI[v].selCls : '';
-        return `<div class="pri-opt ${sel}" data-val="${v}" onclick="selectPri(${i.id},'${v}')">${PRI[v].label}</div>`;
-      }).join('')}
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <div class="pri-selector" id="edit-pri-${i.id}" style="margin-bottom:0;flex:1">
+        ${['0','1','2','3'].map(v => {
+          const sel = v === pri ? 'selected ' + PRI[v].selCls : '';
+          return `<div class="pri-opt ${sel}" data-val="${v}" onclick="selectPri(${i.id},'${v}')">${PRI[v].label}</div>`;
+        }).join('')}
+      </div>
+      ${!offClock ? `<button id="edit-revenue-${i.id}" onclick="toggleRevenueEdit(${i.id})"
+        style="font-size:11px;cursor:pointer;padding:4px 10px;border-radius:20px;border:1px solid ${i.revenue ? '#3A9E6C' : 'var(--border2)'};background:${i.revenue ? '#E0F5EC' : 'none'};color:${i.revenue ? '#1E6B46' : 'var(--text3)'};white-space:nowrap;flex-shrink:0">
+        $ ${i.revenue ? 'Revenue ✓' : 'Revenue'}
+      </button>` : ''}
     </div>
-
-    ${!offClock ? `<div class="edit-label">Revenue impact</div>
-    <div style="margin-bottom:8px">
-      <button id="edit-revenue-${i.id}" onclick="toggleRevenueEdit(${i.id})"
-        class="${i.revenue ? 'remission-restore-btn' : 'snooze-btn'}"
-        style="font-size:12px">
-        ${i.revenue ? '$ Revenue item — tap to unmark' : '$ Mark as revenue impact'}
+    <div class="edit-label">Snooze until</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+      <input class="snooze-input edit-field" type="date" id="edit-snooze-${i.id}" value="${i.snoozedUntil || ''}" style="margin-bottom:0;flex:1;min-width:120px" />
+      ${i.snoozedUntil ? `<button class="snooze-btn" onclick="clearSnooze(${i.id})">✕ Clear</button>` : ''}
+      <button id="edit-weekend-${i.id}" onclick="toggleWeekendFlag(${i.id})"
+        style="font-size:11px;cursor:pointer;padding:4px 10px;border-radius:20px;border:1px solid ${i.weekend ? '#185FA5' : 'var(--border2)'};background:${i.weekend ? '#E8EFFE' : 'none'};color:${i.weekend ? '#185FA5' : 'var(--text3)'};white-space:nowrap;flex-shrink:0">
+        🏖 ${i.weekend ? 'Weekend ✓' : 'Weekend'}
       </button>
-    </div>` : ''}
-    <div class="edit-label">Snooze until <span style="font-weight:400;text-transform:none;font-size:11px">(optional — hides until date, still searchable)</span></div>
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-      <input class="snooze-input edit-field" type="date" id="edit-snooze-${i.id}" value="${i.snoozedUntil || ''}" style="margin-bottom:0;flex:1" />
-      ${i.snoozedUntil ? `<button class="snooze-btn" onclick="clearSnooze(${i.id})">✕ Clear snooze</button>` : ''}
     </div>
     <div class="edit-label">Subtasks</div>
     ${subtasksHTML(i)}
@@ -2931,9 +2926,10 @@ function toggleWeekendFlag(id) {
   // Update button in place
   const btn = document.getElementById('edit-weekend-' + id);
   if (btn) {
-    btn.className = item.weekend ? 'weekend-badge' : 'snooze-btn';
-    btn.style.cssText = 'font-size:12px;cursor:pointer;border:none;padding:4px 10px;border-radius:4px';
-    btn.textContent = item.weekend ? '🏖 Weekend prep — tap to remove' : '🏖 Mark for weekend prep';
+    btn.style.border = '1px solid ' + (item.weekend ? '#185FA5' : 'var(--border2)');
+    btn.style.background = item.weekend ? '#E8EFFE' : 'none';
+    btn.style.color = item.weekend ? '#185FA5' : 'var(--text3)';
+    btn.textContent = '🏖 ' + (item.weekend ? 'Weekend ✓' : 'Weekend');
   }
   apiPost({ action: 'update', item });
 }
