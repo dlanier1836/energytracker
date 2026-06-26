@@ -1068,9 +1068,9 @@ async function toggle(id, e) {
         const resetDate = new Date();
         resetDate.setDate(resetDate.getDate() + delay);
         resetDate.setHours(5, 0, 0, 0);
-        // Use local date to avoid UTC timezone shift
+        // Store full datetime so wake check can be precise to 5am
         const pad = n => String(n).padStart(2,'0');
-        item.snoozedUntil = resetDate.getFullYear() + '-' + pad(resetDate.getMonth()+1) + '-' + pad(resetDate.getDate());
+        item.snoozedUntil = resetDate.getFullYear() + '-' + pad(resetDate.getMonth()+1) + '-' + pad(resetDate.getDate()) + 'T05:00';
       }
     }
     // Don't stay in cleared — move directly to snoozed
@@ -1451,8 +1451,8 @@ function visible() {
     if (!offClock && i.tag === 'personal' && (i.pri === '3') && !searchQuery) return false;
     // Snoozed items hidden unless searching
     if (i.snoozedUntil && !searchQuery) {
-      const snoozeDate = new Date(i.snoozedUntil);
-      if (snoozeDate > now) return false;
+      const snoozeWake = i.snoozedUntil.includes('T') ? new Date(i.snoozedUntil) : new Date(i.snoozedUntil + 'T23:59:59');
+      if (snoozeWake > now) return false;
     }
     if (offClock && i.tag === 'work' && !i.weekend) return false;
     if (searchQuery && !i.name.toLowerCase().includes(searchQuery)) return false;
@@ -3002,8 +3002,14 @@ function autoStarUnsnoozed() {
   const _d = new Date(); const _pad = n => String(n).padStart(2,'0');
   const localToday = _d.getFullYear() + '-' + _pad(_d.getMonth()+1) + '-' + _pad(_d.getDate()); // en-CA gives YYYY-MM-DD
   let changed = false;
+  const nowTs = new Date();
   items.forEach(i => {
-    if (i.snoozedUntil && i.snoozedUntil <= localToday) {
+    if (!i.snoozedUntil) return;
+    // If datetime stored (has T), compare full datetime; otherwise compare date only
+    const wakeTime = i.snoozedUntil.includes('T')
+      ? new Date(i.snoozedUntil) <= nowTs
+      : i.snoozedUntil <= localToday;
+    if (wakeTime) {
       i.snoozedUntil = '';
       i.starred  = true;
       i.cleared  = false;
@@ -3064,9 +3070,16 @@ function renderSnoozedPanel() {
   const now = new Date();
   const _d = new Date(); const _pad = n => String(n).padStart(2,'0');
   const localToday = _d.getFullYear() + '-' + _pad(_d.getMonth()+1) + '-' + _pad(_d.getDate());
-  const snoozedTasks = items.filter(i => i.snoozedUntil && i.snoozedUntil > localToday && !i.archived)
+  const nowTs2 = new Date();
+  const snoozedTasks = items.filter(i => {
+    if (!i.snoozedUntil || i.archived) return false;
+    return i.snoozedUntil.includes('T') ? new Date(i.snoozedUntil) > nowTs2 : i.snoozedUntil > localToday;
+  })
     .sort((a,b) => new Date(a.snoozedUntil) - new Date(b.snoozedUntil));
-  const snoozedContacts = outreachItems.filter(o => o.snoozedUntil && o.snoozedUntil > localToday && !o.archived)
+  const snoozedContacts = outreachItems.filter(o => {
+    if (!o.snoozedUntil || o.archived) return false;
+    return o.snoozedUntil.includes('T') ? new Date(o.snoozedUntil) > nowTs2 : o.snoozedUntil > localToday;
+  })
     .sort((a,b) => new Date(a.snoozedUntil) - new Date(b.snoozedUntil));
   const total = snoozedTasks.length + snoozedContacts.length;
   if (!total) { el.innerHTML = ''; return; }
