@@ -2924,6 +2924,9 @@ function toggleWeekendFlag(id) {
     item.snoozedUntil = '';
   }
   // Update button in place
+  // Update the snooze date input so saveEdit doesn't overwrite it
+  const snoozeInput = document.getElementById('edit-snooze-' + id);
+  if (snoozeInput) snoozeInput.value = item.snoozedUntil || '';
   const btn = document.getElementById('edit-weekend-' + id);
   if (btn) {
     btn.style.border = '1px solid ' + (item.weekend ? '#185FA5' : 'var(--border2)');
@@ -2931,6 +2934,8 @@ function toggleWeekendFlag(id) {
     btn.style.color = item.weekend ? '#185FA5' : 'var(--text3)';
     btn.textContent = '🏖 ' + (item.weekend ? 'Weekend ✓' : 'Weekend');
   }
+  render();
+  renderSnoozedPanel();
   apiPost({ action: 'update', item });
 }
 
