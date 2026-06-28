@@ -159,7 +159,8 @@
   .add-form { background: var(--bg); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 10px; }
   .add-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .add-row input, .add-row select { flex: 1; min-width: 120px; padding: 8px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg2); color: var(--text); font-size: 14px; }
-  .add-btn { padding: 8px 18px; border-radius: var(--radius); border: none; background: var(--text); color: var(--bg); font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .add-btn { padding: 8px 18px; border-radius: var(--radius); border: none; background: #C47D24; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  html.dark .add-btn { background: #f59e0b; color: #1a1a00; }
   .add-btn:hover { opacity: .85; }
 
   /* Filters */
@@ -613,20 +614,18 @@
   <!-- Stats -->
   <div class="stats" id="stats"></div>
 
-  <!-- Sync status -->
-  <div class="sync-status" id="sync-status"></div>
-
   <!-- Search -->
-  <div style="margin-bottom:10px;position:relative">
+  <div style="margin-bottom:4px;position:relative">
     <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none" aria-hidden="true"></i>
     <input type="text" id="search-input" placeholder="Search tasks and contacts…" oninput="onSearch()"
-      style="width:100%;padding:8px 10px 8px 32px;border-radius:var(--radius-lg);border:2px solid var(--border2);background:var(--bg);color:var(--text);font-size:14px;box-sizing:border-box" />
+      style="width:100%;padding:8px 10px 8px 32px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;box-sizing:border-box" />
   </div>
+  <div class="sync-status" id="sync-status" style="text-align:right;margin-bottom:8px"></div>
 
   <!-- Add form -->
   <div class="add-form">
     <div class="add-row">
-      <input type="text" id="f-name" placeholder="New item…" />
+      <input type="text" id="f-name" placeholder="New item…" style="border:1.5px solid #C47D24" />
     </div>
     <div class="add-row">
       <select id="f-cat">
@@ -1070,7 +1069,7 @@ async function toggle(id, e) {
         resetDate.setHours(5, 0, 0, 0);
         // Store full datetime so wake check can be precise to 5am
         const pad = n => String(n).padStart(2,'0');
-        item.snoozedUntil = resetDate.getFullYear() + '-' + pad(resetDate.getMonth()+1) + '-' + pad(resetDate.getDate()) + 'T05:00';
+        item.snoozedUntil = resetDate.getFullYear() + '-' + pad(resetDate.getMonth()+1) + '-' + pad(resetDate.getDate()) + 'T05:00:00';
       }
     }
     // Don't stay in cleared — move directly to snoozed
@@ -1538,12 +1537,20 @@ function render() {
   // Stats
   const counts = { '1':0, '2':0, '3':0, '4':0 };
   const todayStar = activePills.has('starred');
+  const nowForStats = new Date();
   items.filter(i => {
     if (i.cleared) return false;
     if (i.remission) return false;
     if (i.delegated) return false;
     if (offClock && i.tag === 'work' && !i.weekend) return false;
     if (todayStar && !i.starred) return false;
+    // Exclude snoozed items from stat count
+    if (i.snoozedUntil) {
+      const wakeT = i.snoozedUntil.includes('T')
+        ? new Date(i.snoozedUntil.replace(/T(\d{2}:\d{2})$/, 'T$1:00'))
+        : new Date(i.snoozedUntil + 'T23:59:59');
+      if (wakeT > nowForStats) return false;
+    }
     return true;
   }).forEach(i => { if (counts[i.cat] !== undefined) counts[i.cat]++; });
   // Show archive-all button only when cleared items exist
@@ -1772,7 +1779,7 @@ function itemHTML(i) {
           ${i.weekend ? '<span class="weekend-badge">🏖 weekend</span>' : ''}
           ${deadlineHTML(i)}
           ${i.note ? `<span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">${linkifyNote(i.note)}</span>` : ''}
-          ${i.snoozedUntil && new Date(i.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5">💤 until ${new Date(i.snoozedUntil+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
+          ${i.snoozedUntil && new Date(i.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5">💤 until ${new Date(i.snoozedUntil.includes('T')?i.snoozedUntil:i.snoozedUntil+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
           ${i.added ? `<span style="font-size:11px;color:var(--text3)">${i.added}</span>` : ''}
         </div>
         ${(i.subtasks && i.subtasks.length) ? `<div class="subtask-pips"><span style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-right:4px">subtasks</span>${i.subtasks.map(s => `<div class="pip ${s.done ? 'done' : 'open'}" title="${s.name}"></div>`).join('')}</div>` : ''}
@@ -2438,7 +2445,7 @@ function renderOutreach() {
         <div class="outreach-name-wrap" style="flex:1;min-width:0;overflow:hidden">
           <span class="outreach-name ${o.done ? 'done' : ''}" id="oname-${o.id}" onclick="editOutreachName(${o.id}, event)" title="Tap to edit" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.name}${o.revenue ? ' <span class=\"rev-badge\" title=\"Revenue contact\">$</span>' : ''}</span>
           ${o.lastPinged ? `<span class="ping-ago" onclick="setPingDate(${o.id}, event)" title="Tap to change date" style="display:block;margin-top:1px">${formatPingAgo(o.lastPinged)}</span>` : ''}
-          ${o.snoozedUntil && new Date(o.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5;display:block;margin-top:1px">💤 until ${new Date(o.snoozedUntil+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
+          ${o.snoozedUntil && new Date(o.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5;display:block;margin-top:1px">💤 until ${new Date(o.snoozedUntil.includes('T')?o.snoozedUntil:o.snoozedUntil+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
         </div>
         <button class="outreach-del" onclick="deleteOutreach(${o.id}, event)" aria-label="Remove"><i class="ti ti-x"></i></button>
       </div>
@@ -2919,7 +2926,7 @@ function toggleWeekendFlag(id) {
     d.setDate(d.getDate() + daysUntil);
     d.setHours(12, 0, 0, 0);
     const pad = n => String(n).padStart(2,'0');
-    item.snoozedUntil = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate());
+    item.snoozedUntil = d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) + 'T12:00:00';
   } else {
     item.snoozedUntil = '';
   }
@@ -3007,7 +3014,7 @@ function autoStarUnsnoozed() {
     if (!i.snoozedUntil) return;
     // If datetime stored (has T), compare full datetime; otherwise compare date only
     const wakeTime = i.snoozedUntil.includes('T')
-      ? new Date(i.snoozedUntil) <= nowTs
+      ? new Date(i.snoozedUntil.replace(/T(\d{2}:\d{2})$/, 'T$1:00')) <= nowTs
       : i.snoozedUntil <= localToday;
     if (wakeTime) {
       i.snoozedUntil = '';
@@ -3073,7 +3080,7 @@ function renderSnoozedPanel() {
   const nowTs2 = new Date();
   const snoozedTasks = items.filter(i => {
     if (!i.snoozedUntil || i.archived) return false;
-    return i.snoozedUntil.includes('T') ? new Date(i.snoozedUntil) > nowTs2 : i.snoozedUntil > localToday;
+    return i.snoozedUntil.includes('T') ? new Date(i.snoozedUntil.replace(/T(\d{2}:\d{2})$/, 'T$1:00')) > nowTs2 : i.snoozedUntil > localToday;
   })
     .sort((a,b) => new Date(a.snoozedUntil) - new Date(b.snoozedUntil));
   const snoozedContacts = outreachItems.filter(o => {
@@ -3085,7 +3092,9 @@ function renderSnoozedPanel() {
   if (!total) { el.innerHTML = ''; return; }
 
   const taskRows = snoozedTasks.map(i => {
-    const label = new Date(i.snoozedUntil + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    const _sRaw = i.snoozedUntil.includes('T') ? i.snoozedUntil : i.snoozedUntil + 'T12:00:00';
+    const _sNorm = _sRaw.replace(/T(\d{2}:\d{2})$/, 'T$1:00'); // ensure HH:MM:SS
+    const label = new Date(_sNorm).toLocaleDateString('en-US', {month:'short', day:'numeric'});
     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--radius)">'
       + '<i class="ti ti-checkbox" style="font-size:13px;color:var(--text3);flex-shrink:0"></i>'
       + '<span style="flex:1;font-size:13px">' + i.name + '</span>'
@@ -3095,7 +3104,9 @@ function renderSnoozedPanel() {
   }).join('');
 
   const contactRows = snoozedContacts.map(o => {
-    const label = new Date(o.snoozedUntil + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'});
+    const _sRawO = o.snoozedUntil.includes('T') ? o.snoozedUntil : o.snoozedUntil + 'T12:00:00';
+    const _sNormO = _sRawO.replace(/T(\d{2}:\d{2})$/, 'T$1:00');
+    const label = new Date(_sNormO).toLocaleDateString('en-US', {month:'short', day:'numeric'});
     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:var(--radius)">'
       + '<i class="ti ti-user" style="font-size:13px;color:var(--text3);flex-shrink:0"></i>'
       + '<span style="flex:1;font-size:13px">' + o.name + '</span>'
