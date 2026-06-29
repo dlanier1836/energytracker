@@ -1538,12 +1538,14 @@ function render() {
   const counts = { '1':0, '2':0, '3':0, '4':0 };
   const todayStar = activePills.has('starred');
   const nowForStats = new Date();
+  const prioritizedActive = activePills.has('prioritized');
   items.filter(i => {
     if (i.cleared) return false;
     if (i.remission) return false;
     if (i.delegated) return false;
     if (offClock && i.tag === 'work' && !i.weekend) return false;
     if (todayStar && !i.starred) return false;
+    if (prioritizedActive && i.pri !== '0') return false;
     // Exclude snoozed items from stat count
     if (i.snoozedUntil) {
       const wakeT = i.snoozedUntil.includes('T')
