@@ -622,6 +622,12 @@
   </div>
   <div class="sync-status" id="sync-status" style="text-align:right;margin-bottom:8px"></div>
 
+  <!-- Intention -->
+  <div style="margin-bottom:10px;position:relative">
+    <input type="text" id="intention-input" placeholder="✦ Today's intention…" oninput="saveIntention()"
+      style="width:100%;padding:8px 10px;border-radius:var(--radius-lg);border:1px dashed var(--border2);background:transparent;color:var(--text2);font-size:13px;font-style:italic;box-sizing:border-box" />
+  </div>
+
   <!-- Add form -->
   <div class="add-form">
     <div class="add-row">
@@ -870,6 +876,7 @@ function toggleClock() {
   offClock = !offClock;
   localStorage.setItem('offClock', offClock);
   applyClockMode();
+loadIntention();
 // Show revenue add button if in work mode
 const revAddBtnInit = document.getElementById('add-rev-btn');
 if (revAddBtnInit) revAddBtnInit.style.display = offClock ? 'none' : '';
@@ -1389,6 +1396,25 @@ async function saveEdit(id) {
 }
 
 // ── Filters ───────────────────────────────────────────────
+function saveIntention() {
+  const val = document.getElementById('intention-input').value;
+  localStorage.setItem('dailyIntention', JSON.stringify({ text: val, date: new Date().toDateString() }));
+}
+
+function loadIntention() {
+  const el = document.getElementById('intention-input');
+  if (!el) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem('dailyIntention') || '{}');
+    // Only restore if it's from today — fresh intention each day
+    if (saved.date === new Date().toDateString()) {
+      el.value = saved.text || '';
+    } else {
+      el.value = '';
+    }
+  } catch(e) { el.value = ''; }
+}
+
 function onSearch() {
   searchQuery = document.getElementById('search-input').value.trim().toLowerCase();
   render();
