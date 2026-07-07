@@ -624,7 +624,7 @@
 
   <!-- Intention -->
   <div style="margin-bottom:8px;position:relative">
-    <input type="text" id="intention-input" placeholder="✦ Today's intention…" oninput="saveIntention()"
+    <input type="text" id="intention-input" placeholder="✦ Today's intention…" oninput="saveIntention()" onkeydown="if(event.key==='Enter'){event.preventDefault();commitField(this);saveIntention();}"
       style="width:100%;padding:8px 10px;border-radius:var(--radius-lg);border:1px dashed var(--border2);background:transparent;color:var(--text2);font-size:13px;font-style:italic;box-sizing:border-box" />
   </div>
 
@@ -633,15 +633,15 @@
     <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Three wins today</div>
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
       <span style="color:#3A9E6C;font-size:13px">•</span>
-      <input type="text" id="win-1" placeholder="First win…" oninput="saveWins()" style="flex:1;border:none;background:transparent;color:var(--text2);font-size:13px;padding:2px 0;outline:none" />
+      <input type="text" id="win-1" placeholder="First win…" oninput="saveWins()" onkeydown="if(event.key==='Enter'){event.preventDefault();commitField(this);saveWins();}" style="flex:1;border:none;background:transparent;color:var(--text2);font-size:13px;padding:2px 0;outline:none" />
     </div>
     <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
       <span style="color:#3A9E6C;font-size:13px">•</span>
-      <input type="text" id="win-2" placeholder="Second win…" oninput="saveWins()" style="flex:1;border:none;background:transparent;color:var(--text2);font-size:13px;padding:2px 0;outline:none" />
+      <input type="text" id="win-2" placeholder="Second win…" oninput="saveWins()" onkeydown="if(event.key==='Enter'){event.preventDefault();commitField(this);saveWins();}" style="flex:1;border:none;background:transparent;color:var(--text2);font-size:13px;padding:2px 0;outline:none" />
     </div>
     <div style="display:flex;align-items:center;gap:6px">
       <span style="color:#3A9E6C;font-size:13px">•</span>
-      <input type="text" id="win-3" placeholder="Third win…" oninput="saveWins()" style="flex:1;border:none;background:transparent;color:var(--text2);font-size:13px;padding:2px 0;outline:none" />
+      <input type="text" id="win-3" placeholder="Third win…" oninput="saveWins()" onkeydown="if(event.key==='Enter'){event.preventDefault();commitField(this);saveWins();}" style="flex:1;border:none;background:transparent;color:var(--text2);font-size:13px;padding:2px 0;outline:none" />
     </div>
   </div>
 
@@ -1415,17 +1415,29 @@ async function saveEdit(id) {
 
 // ── Filters ───────────────────────────────────────────────
 function saveIntention() {
-  const val = document.getElementById('intention-input').value;
-  localStorage.setItem('dailyIntention', JSON.stringify({ text: val, date: new Date().toDateString() }));
+  const el = document.getElementById('intention-input');
+  const committed = el && el.dataset.committed === 'true';
+  localStorage.setItem('dailyIntention', JSON.stringify({ text: el.value, committed, date: new Date().toDateString() }));
+}
+
+function commitField(el) {
+  // Toggle committed visual — bold + solid border, no longer italic
+  el.style.fontStyle = 'normal';
+  el.style.fontWeight = '600';
+  el.dataset.committed = 'true';
+  el.blur();
+  saveWins(); saveIntention();
 }
 
 function saveWins() {
+  const getCommit = id => { const e = document.getElementById(id); return e && e.dataset.committed === 'true'; };
   const wins = [
     document.getElementById('win-1').value,
     document.getElementById('win-2').value,
     document.getElementById('win-3').value
   ];
-  localStorage.setItem('dailyWins', JSON.stringify({ wins, date: new Date().toDateString() }));
+  const committed = [getCommit('win-1'), getCommit('win-2'), getCommit('win-3')];
+  localStorage.setItem('dailyWins', JSON.stringify({ wins, committed, date: new Date().toDateString() }));
 }
 
 function loadWins() {
@@ -1434,9 +1446,13 @@ function loadWins() {
   try {
     const saved = JSON.parse(localStorage.getItem('dailyWins') || '{}');
     if (saved.date === new Date().toDateString() && saved.wins) {
-      els.forEach((el, idx) => { if (el) el.value = saved.wins[idx] || ''; });
+      els.forEach((el, idx) => {
+        if (!el) return;
+        el.value = saved.wins[idx] || '';
+        if (saved.committed && saved.committed[idx]) { el.style.fontWeight='600'; el.dataset.committed='true'; }
+      });
     } else {
-      els.forEach(el => { if (el) el.value = ''; });
+      els.forEach(el => { if (el) { el.value=''; el.style.fontWeight='normal'; el.dataset.committed=''; } });
     }
   } catch(e) { els.forEach(el => { if (el) el.value = ''; }); }
 }
@@ -1446,11 +1462,11 @@ function loadIntention() {
   if (!el) return;
   try {
     const saved = JSON.parse(localStorage.getItem('dailyIntention') || '{}');
-    // Only restore if it's from today — fresh intention each day
     if (saved.date === new Date().toDateString()) {
       el.value = saved.text || '';
+      if (saved.committed) { el.style.fontStyle='normal'; el.style.fontWeight='600'; el.dataset.committed='true'; }
     } else {
-      el.value = '';
+      el.value = ''; el.style.fontStyle='italic'; el.style.fontWeight='normal'; el.dataset.committed='';
     }
   } catch(e) { el.value = ''; }
 }
