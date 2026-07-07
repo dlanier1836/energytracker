@@ -623,9 +623,26 @@
   <div class="sync-status" id="sync-status" style="text-align:right;margin-bottom:8px"></div>
 
   <!-- Intention -->
-  <div style="margin-bottom:10px;position:relative">
+  <div style="margin-bottom:8px;position:relative">
     <input type="text" id="intention-input" placeholder="✦ Today's intention…" oninput="saveIntention()"
       style="width:100%;padding:8px 10px;border-radius:var(--radius-lg);border:1px dashed var(--border2);background:transparent;color:var(--text2);font-size:13px;font-style:italic;box-sizing:border-box" />
+  </div>
+
+  <!-- Three successes -->
+  <div style="margin-bottom:10px;padding:8px 10px;border-radius:var(--radius-lg);border:1px dashed var(--border2)">
+    <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Three wins today</div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <span style="color:#3A9E6C;font-size:13px">•</span>
+      <input type="text" id="win-1" placeholder="First win…" oninput="saveWins()" style="flex:1;border:none;background:transparent;color:var(--text2);font-size:13px;padding:2px 0;outline:none" />
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <span style="color:#3A9E6C;font-size:13px">•</span>
+      <input type="text" id="win-2" placeholder="Second win…" oninput="saveWins()" style="flex:1;border:none;background:transparent;color:var(--text2);font-size:13px;padding:2px 0;outline:none" />
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <span style="color:#3A9E6C;font-size:13px">•</span>
+      <input type="text" id="win-3" placeholder="Third win…" oninput="saveWins()" style="flex:1;border:none;background:transparent;color:var(--text2);font-size:13px;padding:2px 0;outline:none" />
+    </div>
   </div>
 
   <!-- Add form -->
@@ -877,6 +894,7 @@ function toggleClock() {
   localStorage.setItem('offClock', offClock);
   applyClockMode();
 loadIntention();
+loadWins();
 // Show revenue add button if in work mode
 const revAddBtnInit = document.getElementById('add-rev-btn');
 if (revAddBtnInit) revAddBtnInit.style.display = offClock ? 'none' : '';
@@ -1399,6 +1417,28 @@ async function saveEdit(id) {
 function saveIntention() {
   const val = document.getElementById('intention-input').value;
   localStorage.setItem('dailyIntention', JSON.stringify({ text: val, date: new Date().toDateString() }));
+}
+
+function saveWins() {
+  const wins = [
+    document.getElementById('win-1').value,
+    document.getElementById('win-2').value,
+    document.getElementById('win-3').value
+  ];
+  localStorage.setItem('dailyWins', JSON.stringify({ wins, date: new Date().toDateString() }));
+}
+
+function loadWins() {
+  const els = [document.getElementById('win-1'), document.getElementById('win-2'), document.getElementById('win-3')];
+  if (!els[0]) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem('dailyWins') || '{}');
+    if (saved.date === new Date().toDateString() && saved.wins) {
+      els.forEach((el, idx) => { if (el) el.value = saved.wins[idx] || ''; });
+    } else {
+      els.forEach(el => { if (el) el.value = ''; });
+    }
+  } catch(e) { els.forEach(el => { if (el) el.value = ''; }); }
 }
 
 function loadIntention() {
