@@ -367,6 +367,10 @@
   .delegated-recall { background: none; border: 0.5px solid #2A44A0; color: #2A44A0; font-size: 11px; padding: 2px 8px; border-radius: 20px; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
   .recur-badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: var(--bg2); color: var(--text3); border: 0.5px solid var(--border); flex-shrink: 0; }
   .weekend-badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #E8EFFE; color: #185FA5; border: 0.5px solid #2A44A0; flex-shrink: 0; }
+  .horizon-badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; flex-shrink: 0; }
+  .horizon-month { background: #FEF3E2; color: #7A4D10; border: 0.5px solid #C47D24; }
+  .horizon-someday { background: var(--bg2); color: var(--text3); border: 0.5px solid var(--border); }
+  html.dark .horizon-month { background: #2a1e0a; color: #f59e0b; border-color: #f59e0b; }
   html.dark .weekend-badge { background: #121a2a; color: #93c5fd; border-color: #93c5fd; }
   html.dark .delegated-recall { border-color: #93c5fd; color: #93c5fd; }
   .delegated-recall:hover { background: #E8EFFE; }
@@ -379,6 +383,20 @@
   .load-counter { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 4px; margin-right: 4px; }
   .load-counter.warn  { color: #C47D24; }
   .load-counter.heavy { color: #D94848; }
+  /* Countdown badges — desktop only */
+  .countdown-row { display: none; }
+  @media (min-width: 768px) {
+    .countdown-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1rem; }
+  }
+  .countdown-badge { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; cursor: pointer; background: var(--bg); transition: border-color .15s; min-height: 52px; display: flex; flex-direction: column; justify-content: center; }
+  .countdown-badge:hover { border-color: #C47D24; }
+  .countdown-days { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1; }
+  .countdown-days.past { color: #D94848; }
+  .countdown-days.today { color: #3A9E6C; }
+  .countdown-topic { font-size: 11px; color: var(--text3); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .countdown-empty { font-size: 12px; color: var(--text3); font-style: italic; }
+  html.dark .countdown-badge:hover { border-color: #f59e0b; }
+
   /* Archive all button */
   .archive-all-btn { font-size: 12px; color: var(--text3); background: none; border: 0.5px solid var(--border); padding: 5px 12px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
   .archive-all-btn:hover { color: #7A4D10; border-color: #C47D24; background: #FEF3E2; }
@@ -613,6 +631,9 @@
 
   <!-- Stats -->
   <div class="stats" id="stats"></div>
+
+  <!-- Countdown badges (desktop only) -->
+  <div class="countdown-row" id="countdown-row"></div>
 
   <!-- Search -->
   <div style="margin-bottom:4px;position:relative">
@@ -895,6 +916,8 @@ function toggleClock() {
   applyClockMode();
 loadIntention();
 loadWins();
+loadMetaFromSheet();
+renderCountdowns();
 // Show revenue add button if in work mode
 const revAddBtnInit = document.getElementById('add-rev-btn');
 if (revAddBtnInit) revAddBtnInit.style.display = offClock ? 'none' : '';
@@ -961,6 +984,7 @@ function normalize(r) {
     lastCompleted: r.lastCompleted ? String(r.lastCompleted).slice(0,10) : '',
     nextRecurAt:   r.nextRecurAt   || '',
     weekend:       r.weekend === true || String(r.weekend).toUpperCase() === 'TRUE',
+    horizon:       r.horizon || 'week',
   };
 }
 
@@ -1057,6 +1081,7 @@ async function addItem() {
     lastCompleted:    '',
     nextRecurAt:      '',
     weekend:          false,
+    horizon:          'week',
   };
   items.unshift(item);
   document.getElementById('f-name').value = '';
@@ -1395,6 +1420,8 @@ async function saveEdit(id) {
   item.deadline    = document.getElementById('edit-deadline-' + id).value || '';
   item.snoozedUntil    = document.getElementById('edit-snooze-' + id).value || '';
   item.recurring       = document.getElementById('edit-recurring-' + id).value || '';
+  const horizonEl      = document.getElementById('edit-horizon-' + id);
+  item.horizon         = horizonEl ? horizonEl.value : 'week';
   const nextRecEl      = document.getElementById('edit-nextrec-' + id);
   item.nextRecurAt     = nextRecEl ? nextRecEl.value : '';
   const newDelegatedTo    = (document.getElementById('edit-delegatedto-' + id).value || '').trim();
@@ -1414,10 +1441,61 @@ async function saveEdit(id) {
 }
 
 // ── Filters ───────────────────────────────────────────────
+let metaSaveTimer = null;
 function saveIntention() {
   const el = document.getElementById('intention-input');
   const committed = el && el.dataset.committed === 'true';
   localStorage.setItem('dailyIntention', JSON.stringify({ text: el.value, committed, date: new Date().toDateString() }));
+  scheduleMetaSave();
+}
+
+function scheduleMetaSave() {
+  clearTimeout(metaSaveTimer);
+  metaSaveTimer = setTimeout(pushMetaToSheet, 800);
+}
+
+async function pushMetaToSheet() {
+  if (!scriptUrl) return;
+  const intEl = document.getElementById('intention-input');
+  const getCommit = id => { const e = document.getElementById(id); return e && e.dataset.committed === 'true'; };
+  const meta = {
+    date: new Date().toDateString(),
+    intention: intEl ? intEl.value : '',
+    intentionCommitted: intEl && intEl.dataset.committed === 'true',
+    wins: ['win-1','win-2','win-3'].map(id => { const e=document.getElementById(id); return e?e.value:''; }),
+    winsCommitted: ['win-1','win-2','win-3'].map(getCommit),
+    countdowns: countdowns
+  };
+  try {
+    await fetch(scriptUrl, { method:'POST', body: JSON.stringify({ action:'saveMeta', meta }) });
+  } catch(e) {}
+}
+
+async function loadMetaFromSheet() {
+  if (!scriptUrl) return;
+  try {
+    const res = await fetch(scriptUrl + '?action=getMeta');
+    if (!res.ok) return;
+    const meta = await res.json();
+    if (!meta) return;
+    // Countdowns always load (not daily); intention/wins only if today
+    if (meta.countdowns) { countdowns = meta.countdowns; renderCountdowns(); }
+    if (meta.date !== new Date().toDateString()) return; // intention/wins only today's
+    const intEl = document.getElementById('intention-input');
+    if (intEl && meta.intention) {
+      intEl.value = meta.intention;
+      if (meta.intentionCommitted) { intEl.style.fontStyle='normal'; intEl.style.fontWeight='600'; intEl.dataset.committed='true'; }
+    }
+    ['win-1','win-2','win-3'].forEach((id, idx) => {
+      const e = document.getElementById(id);
+      if (e && meta.wins && meta.wins[idx]) {
+        e.value = meta.wins[idx];
+        if (meta.winsCommitted && meta.winsCommitted[idx]) { e.style.fontWeight='600'; e.dataset.committed='true'; }
+      }
+    });
+    // Countdowns persist regardless of date (not daily-reset)
+    if (meta.countdowns) { countdowns = meta.countdowns; renderCountdowns(); }
+  } catch(e) {}
 }
 
 function commitField(el) {
@@ -1438,6 +1516,7 @@ function saveWins() {
   ];
   const committed = [getCommit('win-1'), getCommit('win-2'), getCommit('win-3')];
   localStorage.setItem('dailyWins', JSON.stringify({ wins, committed, date: new Date().toDateString() }));
+  scheduleMetaSave();
 }
 
 function loadWins() {
@@ -1817,6 +1896,12 @@ function itemHTML(i) {
       <input class="edit-field" type="date" id="edit-delegationexpiry-${i.id}" value="${i.delegationExpiry || ''}" style="margin-bottom:0;width:140px" title="Check-back date" />
     </div>
     <div class="edit-label" style="margin-top:8px">Priority</div>
+    <div class="edit-label">Horizon</div>
+    <select class="edit-field" id="edit-horizon-${i.id}" style="margin-bottom:8px">
+      <option value="week"    ${(i.horizon||'week')==='week'   ?'selected':''}>This Week</option>
+      <option value="month"   ${i.horizon==='month'  ?'selected':''}>This Month</option>
+      <option value="someday" ${i.horizon==='someday'?'selected':''}>Someday</option>
+    </select>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
       <div class="pri-selector" id="edit-pri-${i.id}" style="margin-bottom:0;flex:1">
         ${['0','1','2','3'].map(v => {
@@ -1861,6 +1946,8 @@ function itemHTML(i) {
           <span class="badge ${i.tag === 'work' ? 'bwork' : 'bpersonal'}" style="text-transform:none;letter-spacing:0">${i.tag === 'work' ? 'Work' : 'Personal'}</span>
           ${i.recurring ? `<span class="recur-badge">🔁 ${i.recurring}</span>` : ''}
           ${i.weekend ? '<span class="weekend-badge">🏖 weekend</span>' : ''}
+          ${i.horizon === 'month' ? '<span class="horizon-badge horizon-month">This Month</span>' : ''}
+          ${i.horizon === 'someday' ? '<span class="horizon-badge horizon-someday">Someday</span>' : ''}
           ${deadlineHTML(i)}
           ${i.note ? `<span style="display:block;font-size:11px;color:var(--text3);margin-top:2px">${linkifyNote(i.note)}</span>` : ''}
           ${i.snoozedUntil && new Date(i.snoozedUntil) > new Date() ? `<span style="font-size:11px;color:#185FA5">💤 until ${new Date(i.snoozedUntil.includes('T')?i.snoozedUntil:i.snoozedUntil+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>` : ''}
@@ -3227,6 +3314,42 @@ async function clearContactSnooze(id) {
   renderOutreach();
   if (!(activePills.has('starred') && activePills.has('prioritized'))) renderSnoozedPanel();
   await outreachPost({ action: 'updateOutreach', item: o });
+}
+
+// ── Countdown badges ──────────────────────────────────────
+let countdowns = [null, null, null, null]; // {date, topic} or null
+
+function renderCountdowns() {
+  const row = document.getElementById('countdown-row');
+  if (!row) return;
+  row.innerHTML = countdowns.map((c, idx) => {
+    if (!c || !c.date) {
+      return '<div class="countdown-badge" onclick="editCountdown(' + idx + ')"><span class="countdown-empty">+ Set date</span></div>';
+    }
+    const target = new Date(c.date + 'T12:00:00');
+    const now = new Date();
+    const days = Math.ceil((target - now) / 86400000);
+    let daysLabel, cls = '';
+    if (days > 0)      { daysLabel = days + 'd'; }
+    else if (days === 0) { daysLabel = 'Today'; cls = 'today'; }
+    else               { daysLabel = days + 'd'; cls = 'past'; }
+    return '<div class="countdown-badge" onclick="editCountdown(' + idx + ')">'
+      + '<span class="countdown-days ' + cls + '">' + daysLabel + '</span>'
+      + '<span class="countdown-topic">' + (c.topic || '') + '</span></div>';
+  }).join('');
+}
+
+function editCountdown(idx) {
+  const c = countdowns[idx] || {};
+  const topic = prompt('Countdown label (e.g. "NASPO trade show"):', c.topic || '');
+  if (topic === null) return; // cancelled
+  if (!topic.trim()) { countdowns[idx] = null; renderCountdowns(); pushMetaToSheet(); return; }
+  const date = prompt('Target date (YYYY-MM-DD):', c.date || '');
+  if (date === null) return;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) { alert('Please use YYYY-MM-DD format.'); return; }
+  countdowns[idx] = { topic: topic.trim(), date: date.trim() };
+  renderCountdowns();
+  pushMetaToSheet();
 }
 
 // ── Linkify notes ─────────────────────────────────────────
