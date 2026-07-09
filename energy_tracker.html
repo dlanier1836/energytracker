@@ -914,10 +914,6 @@ function toggleClock() {
   offClock = !offClock;
   localStorage.setItem('offClock', offClock);
   applyClockMode();
-loadIntention();
-loadWins();
-loadMetaFromSheet();
-renderCountdowns();
 // Show revenue add button if in work mode
 const revAddBtnInit = document.getElementById('add-rev-btn');
 if (revAddBtnInit) revAddBtnInit.style.display = offClock ? 'none' : '';
@@ -3420,6 +3416,10 @@ loadOutreach();
 loadErrands();
 loadFocusFromSheet();
 renderRemission();
+loadIntention();
+loadWins();
+renderCountdowns();
+loadMetaFromSheet();
 </script>
 </body>
 </html>
