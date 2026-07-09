@@ -388,12 +388,12 @@
   @media (min-width: 768px) {
     .countdown-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1rem; }
   }
-  .countdown-badge { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; cursor: pointer; background: var(--bg); transition: border-color .15s; min-height: 52px; display: flex; flex-direction: column; justify-content: center; }
+  .countdown-badge { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; cursor: pointer; background: var(--bg); transition: border-color .15s; min-height: 52px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
   .countdown-badge:hover { border-color: #C47D24; }
   .countdown-days { font-size: 18px; font-weight: 700; color: var(--text); line-height: 1; }
   .countdown-days.past { color: #D94848; }
   .countdown-days.today { color: #3A9E6C; }
-  .countdown-topic { font-size: 11px; color: var(--text3); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .countdown-topic { font-size: 11px; color: var(--text3); margin-top: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
   .countdown-empty { font-size: 12px; color: var(--text3); font-style: italic; }
   html.dark .countdown-badge:hover { border-color: #f59e0b; }
 
@@ -3318,7 +3318,13 @@ let countdowns = [null, null, null, null]; // {date, topic} or null
 function renderCountdowns() {
   const row = document.getElementById('countdown-row');
   if (!row) return;
-  row.innerHTML = countdowns.map((c, idx) => {
+  // Sort filled countdowns soonest-first; keep empty slots at the end
+  const filled = countdowns.filter(c => c && c.date).sort((a,b) => a.date.localeCompare(b.date));
+  const emptyCount = 4 - filled.length;
+  const display = filled.concat(Array(emptyCount).fill(null));
+  // Persist the sorted order back
+  countdowns = display;
+  row.innerHTML = display.map((c, idx) => {
     if (!c || !c.date) {
       return '<div class="countdown-badge" onclick="editCountdown(' + idx + ')"><span class="countdown-empty">+ Set date</span></div>';
     }
@@ -3337,15 +3343,39 @@ function renderCountdowns() {
 
 function editCountdown(idx) {
   const c = countdowns[idx] || {};
-  const topic = prompt('Countdown label (e.g. "NASPO trade show"):', c.topic || '');
-  if (topic === null) return; // cancelled
-  if (!topic.trim()) { countdowns[idx] = null; renderCountdowns(); pushMetaToSheet(); return; }
-  const date = prompt('Target date (YYYY-MM-DD):', c.date || '');
-  if (date === null) return;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date.trim())) { alert('Please use YYYY-MM-DD format.'); return; }
-  countdowns[idx] = { topic: topic.trim(), date: date.trim() };
-  renderCountdowns();
-  pushMetaToSheet();
+  // Build a small modal with label + native date picker in one interface
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:flex;align-items:center;justify-content:center';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:var(--card);border-radius:12px;padding:20px;width:300px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.3)';
+  box.innerHTML =
+    '<div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px">Countdown</div>'
+    + '<label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Label</label>'
+    + '<input type="text" id="cd-topic" value="' + (c.topic || '').replace(/"/g,'&quot;') + '" placeholder="e.g. NASPO trade show" style="width:100%;padding:8px;margin:4px 0 12px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--text);font-size:14px;box-sizing:border-box" />'
+    + '<label style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em">Date</label>'
+    + '<input type="date" id="cd-date" value="' + (c.date || '') + '" style="width:100%;padding:8px;margin:4px 0 16px;border:1px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--text);font-size:14px;box-sizing:border-box" />'
+    + '<div style="display:flex;gap:8px;justify-content:space-between">'
+    + '<button id="cd-clear" style="font-size:13px;padding:8px 12px;border:none;background:none;color:#D94848;cursor:pointer">Clear</button>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button id="cd-cancel" style="font-size:13px;padding:8px 14px;border:1px solid var(--border);background:none;color:var(--text2);border-radius:6px;cursor:pointer">Cancel</button>'
+    + '<button id="cd-save" style="font-size:13px;padding:8px 14px;border:none;background:#C47D24;color:#fff;border-radius:6px;cursor:pointer;font-weight:600">Save</button>'
+    + '</div></div>';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  const close = () => document.body.removeChild(overlay);
+  overlay.onclick = e => { if (e.target === overlay) close(); };
+  document.getElementById('cd-cancel').onclick = close;
+  document.getElementById('cd-clear').onclick = () => {
+    countdowns[idx] = null; close(); renderCountdowns(); pushMetaToSheet();
+  };
+  document.getElementById('cd-save').onclick = () => {
+    const topic = document.getElementById('cd-topic').value.trim();
+    const date = document.getElementById('cd-date').value;
+    if (!topic || !date) { alert('Please enter both a label and a date.'); return; }
+    countdowns[idx] = { topic, date };
+    close(); renderCountdowns(); pushMetaToSheet();
+  };
+  setTimeout(() => document.getElementById('cd-topic').focus(), 50);
 }
 
 // ── Linkify notes ─────────────────────────────────────────
